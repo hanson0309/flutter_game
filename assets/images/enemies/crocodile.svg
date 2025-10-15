@@ -1,0 +1,76 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="128" cy="128" r="120" fill="#2F4F2F" stroke="#1C3A1C" stroke-width="4"/>
+  
+  <!-- 鳄鱼身体 -->
+  <ellipse cx="128" cy="140" rx="60" ry="25" fill="#4F7942"/>
+  
+  <!-- 鳄鱼头部 -->
+  <ellipse cx="128" cy="110" rx="35" ry="20" fill="#4F7942"/>
+  
+  <!-- 鳄鱼嘴巴 -->
+  <ellipse cx="128" cy="95" rx="40" ry="12" fill="#3A5F35"/>
+  <ellipse cx="128" cy="100" rx="38" ry="8" fill="#2D4A2A"/>
+  
+  <!-- 牙齿 -->
+  <polygon points="110,95 112,90 114,95" fill="#FFF"/>
+  <polygon points="118,95 120,88 122,95" fill="#FFF"/>
+  <polygon points="134,95 136,88 138,95" fill="#FFF"/>
+  <polygon points="142,95 144,90 146,95" fill="#FFF"/>
+  
+  <!-- 鼻孔 -->
+  <ellipse cx="123" cy="92" rx="2" ry="1" fill="#1C3A1C"/>
+  <ellipse cx="133" cy="92" rx="2" ry="1" fill="#1C3A1C"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="118" cy="105" r="6" fill="#8B4513"/>
+  <circle cx="138" cy="105" r="6" fill="#8B4513"/>
+  <circle cx="118" cy="105" r="3" fill="#000"/>
+  <circle cx="138" cy="105" r="3" fill="#000"/>
+  <circle cx="119" cy="103" r="1" fill="#FFF"/>
+  <circle cx="139" cy="103" r="1" fill="#FFF"/>
+  
+  <!-- 鳞片纹理 -->
+  <g stroke="#3A5F35" stroke-width="1" fill="none">
+    <path d="M 100 125 Q 110 120 120 125"/>
+    <path d="M 105 135 Q 115 130 125 135"/>
+    <path d="M 130 135 Q 140 130 150 135"/>
+    <path d="M 135 125 Q 145 120 155 125"/>
+    <path d="M 110 145 Q 120 140 130 145"/>
+    <path d="M 125 145 Q 135 140 145 145"/>
+  </g>
+  
+  <!-- 四肢 -->
+  <ellipse cx="100" cy="155" rx="8" ry="15" fill="#4F7942"/>
+  <ellipse cx="156" cy="155" rx="8" ry="15" fill="#4F7942"/>
+  <ellipse cx="110" cy="165" rx="6" ry="12" fill="#4F7942"/>
+  <ellipse cx="146" cy="165" rx="6" ry="12" fill="#4F7942"/>
+  
+  <!-- 爪子 -->
+  <g stroke="#1C3A1C" stroke-width="2" fill="none">
+    <path d="M 96 165 L 94 170"/>
+    <path d="M 100 167 L 98 172"/>
+    <path d="M 104 165 L 102 170"/>
+    <path d="M 152 165 L 154 170"/>
+    <path d="M 156 167 L 158 172"/>
+    <path d="M 160 165 L 162 170"/>
+  </g>
+  
+  <!-- 尾巴 -->
+  <ellipse cx="180" cy="140" rx="15" ry="8" fill="#4F7942"/>
+  <ellipse cx="195" cy="138" rx="10" ry="6" fill="#4F7942"/>
+  
+  <!-- 尾巴刺 -->
+  <g stroke="#3A5F35" stroke-width="1" fill="#3A5F35">
+    <polygon points="175,135 177,130 179,135"/>
+    <polygon points="185,133 187,128 189,133"/>
+    <polygon points="192,131 194,126 196,131"/>
+  </g>
+  
+  <!-- 装饰文字 -->
+  <text x="128" y="220" text-anchor="middle" font-family="serif" font-size="16" fill="#2F4F2F" font-weight="bold">沼泽鳄鱼</text>
+  
+  <!-- 危险标记 -->
+  <circle cx="200" cy="60" r="12" fill="#FF4444" stroke="#CC0000" stroke-width="2"/>
+  <text x="200" y="66" text-anchor="middle" font-family="serif" font-size="14" fill="#FFF" font-weight="bold">!</text>
+</svg>
