@@ -21,7 +21,7 @@ Player _$PlayerFromJson(Map<String, dynamic> json) => Player(
   lastTrainingTime: json['lastTrainingTime'] == null
       ? null
       : DateTime.parse(json['lastTrainingTime'] as String),
-  spiritStones: (json['spiritStones'] as num?)?.toInt() ?? 100,
+  spiritStones: (json['spiritStones'] as num?)?.toInt() ?? 1000,
   cultivationPoints: (json['cultivationPoints'] as num?)?.toInt() ?? 0,
   learnedTechniques: (json['learnedTechniques'] as List<dynamic>?)
       ?.map((e) => LearnedTechnique.fromJson(e as Map<String, dynamic>))

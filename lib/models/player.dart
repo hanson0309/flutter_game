@@ -50,7 +50,7 @@ class Player {
     double? currentMana,
     this.isAutoTraining = false,
     this.lastTrainingTime,
-    this.spiritStones = 100,
+    this.spiritStones = 1000,
     this.cultivationPoints = 0,
     List<LearnedTechnique>? learnedTechniques,
     Map<String, EquippedItem?>? equippedItems,

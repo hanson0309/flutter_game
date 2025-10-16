@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'equipment.g.dart';
@@ -52,6 +53,24 @@ class Equipment {
 
   factory Equipment.fromJson(Map<String, dynamic> json) => _$EquipmentFromJson(json);
   Map<String, dynamic> toJson() => _$EquipmentToJson(this);
+
+  // 获取装备品质颜色
+  Color get qualityColor {
+    switch (rarity) {
+      case EquipmentRarity.common:
+        return const Color(0xFF9E9E9E); // 灰色
+      case EquipmentRarity.uncommon:
+        return const Color(0xFF4CAF50); // 绿色
+      case EquipmentRarity.rare:
+        return const Color(0xFF2196F3); // 蓝色
+      case EquipmentRarity.epic:
+        return const Color(0xFF9C27B0); // 紫色
+      case EquipmentRarity.legendary:
+        return const Color(0xFFFF9800); // 橙色
+      case EquipmentRarity.mythic:
+        return const Color(0xFFF44336); // 红色
+    }
+  }
 
   // 获取指定强化等级的属性
   Map<String, double> getStatsAtLevel(int enhanceLevel) {

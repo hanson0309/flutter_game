@@ -38,6 +38,14 @@ const _$EquipmentTypeEnumMap = {
   EquipmentType.armor: 'armor',
   EquipmentType.accessory: 'accessory',
   EquipmentType.treasure: 'treasure',
+  EquipmentType.ring: 'ring',
+  EquipmentType.necklace: 'necklace',
+  EquipmentType.boots: 'boots',
+  EquipmentType.belt: 'belt',
+  EquipmentType.gloves: 'gloves',
+  EquipmentType.helmet: 'helmet',
+  EquipmentType.rune: 'rune',
+  EquipmentType.gem: 'gem',
 };
 
 const _$EquipmentRarityEnumMap = {

@@ -48,6 +48,13 @@ class _InventoryScreenState extends State<InventoryScreen> with TickerProviderSt
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.build, color: Colors.white),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/equipment_synthesis');
+            },
+            tooltip: '装备合成',
+          ),
           PopupMenuButton<InventorySortType>(
             icon: const Icon(Icons.sort, color: Colors.white),
             onSelected: (sortType) {
