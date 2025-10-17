@@ -549,6 +549,13 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
     final result = shopService.purchaseItem(item.id, gameProvider.player!);
     
     if (result.success) {
+      // 如果是装备类物品，添加到全局背包
+      if (item.type == ShopItemType.equipment) {
+        // 使用hashCode作为ID，因为商店ID是字符串格式
+        final equipmentId = item.id.hashCode.abs();
+        gameProvider.purchaseEquipmentFromShop(item.name, item.description, equipmentId);
+        debugPrint('🛒 购买装备: ${item.name}, ID: $equipmentId');
+      }
       _showPurchaseSuccessDialog(item, result);
     } else {
       _showPurchaseFailDialog(result.message);

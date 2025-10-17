@@ -1,33 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/player.dart';
+import '../models/equipment_item.dart';
 import '../providers/game_provider.dart';
 import '../widgets/swipe_back_wrapper.dart';
-
-// 装备项数据类
-class EquipmentItem {
-  final String name;
-  final String description;
-  final IconData icon;
-  final Color color;
-  final int id;
-  final double attackBonus;
-  final double defenseBonus;
-  final double healthBonus;
-  final double manaBonus;
-  
-  EquipmentItem(
-    this.name, 
-    this.description, 
-    this.icon, 
-    this.color, 
-    this.id, {
-    this.attackBonus = 0,
-    this.defenseBonus = 0,
-    this.healthBonus = 0,
-    this.manaBonus = 0,
-  });
-}
 
 class CharacterInfoScreen extends StatefulWidget {
   const CharacterInfoScreen({super.key});
@@ -40,15 +16,6 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
   // 装备栏数据 - 8个槽位（左4个，右4个）
   List<EquipmentItem?> equippedItems = List.filled(8, null);
   
-  // 背包装备数据
-  List<EquipmentItem> inventoryEquipment = [
-    EquipmentItem('青铜剑', '攻击力 +15', Icons.flash_on, Colors.green, 0, attackBonus: 15),
-    EquipmentItem('铁甲', '防御力 +12', Icons.shield, Colors.blue, 1, defenseBonus: 12),
-    EquipmentItem('法师帽', '法力值 +20', Icons.auto_awesome, Colors.purple, 2, manaBonus: 20),
-    EquipmentItem('皮靴', '速度 +5', Icons.directions_run, Colors.brown, 3, defenseBonus: 5),
-    EquipmentItem('护手', '防御力 +8', Icons.back_hand, Colors.grey, 4, defenseBonus: 8),
-    EquipmentItem('项链', '生命值 +25', Icons.circle, Colors.red, 5, healthBonus: 25),
-  ];
 
   // 计算装备加成
   double get equipmentAttackBonus {
@@ -384,11 +351,15 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                     ),
                     const SizedBox(height: 16),
                     Expanded(
-                      child: ListView(
-                        children: inventoryEquipment
-                            .where((item) => !equippedItems.contains(item))
-                            .map((item) => _buildSelectableEquipmentItem(context, item, slotIndex))
-                            .toList(),
+                      child: Consumer<GameProvider>(
+                        builder: (context, gameProvider, child) {
+                          return ListView(
+                            children: gameProvider.globalInventory
+                                .where((item) => !equippedItems.contains(item))
+                                .map((item) => _buildSelectableEquipmentItem(context, item, slotIndex))
+                                .toList(),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -480,10 +451,14 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 装备标签内容
   Widget _buildEquipmentTab(BuildContext context) {
-    return ListView(
-      children: inventoryEquipment
-          .map((item) => _buildInventoryEquipmentItem(context, item))
-          .toList(),
+    return Consumer<GameProvider>(
+      builder: (context, gameProvider, child) {
+        return ListView(
+          children: gameProvider.globalInventory
+              .map((item) => _buildInventoryEquipmentItem(context, item))
+              .toList(),
+        );
+      },
     );
   }
 
@@ -1033,14 +1008,13 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 卸载装备
   void _unequipItem(int slotIndex) {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
     setState(() {
       final unequippedItem = equippedItems[slotIndex];
       if (unequippedItem != null) {
         equippedItems[slotIndex] = null;
-        // 将装备放回背包（如果不在背包中）
-        if (!inventoryEquipment.contains(unequippedItem)) {
-          inventoryEquipment.add(unequippedItem);
-        }
+        // 将装备放回全局背包
+        gameProvider.addEquipmentToInventory(unequippedItem);
       }
     });
     
@@ -1054,18 +1028,17 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 装备物品
   void _equipItem(EquipmentItem item, int slotIndex) {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
     setState(() {
       // 如果槽位已有装备，先卸载
       if (equippedItems[slotIndex] != null) {
         final oldItem = equippedItems[slotIndex]!;
-        if (!inventoryEquipment.contains(oldItem)) {
-          inventoryEquipment.add(oldItem);
-        }
+        gameProvider.addEquipmentToInventory(oldItem);
       }
       
       // 装备新物品
       equippedItems[slotIndex] = item;
-      inventoryEquipment.remove(item);
+      gameProvider.removeEquipmentFromInventory(item);
     });
     
     ScaffoldMessenger.of(context).showSnackBar(

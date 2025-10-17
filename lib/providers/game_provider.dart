@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/player.dart';
 import '../models/technique.dart';
+import '../models/equipment_item.dart';
 import '../services/achievement_service.dart';
 import '../services/audio_service.dart';
 import '../services/task_service.dart';
@@ -15,8 +16,12 @@ class GameProvider extends ChangeNotifier {
   AchievementService? _achievementService;
   TaskService? _taskService;
   
+  // 全局装备背包
+  List<EquipmentItem> _globalInventory = [];
+  
   Player? get player => _player;
   bool get isGameStarted => _player != null;
+  List<EquipmentItem> get globalInventory => _globalInventory;
   
   // 设置成就服务
   void setAchievementService(AchievementService achievementService) {
@@ -47,6 +52,14 @@ class GameProvider extends ChangeNotifier {
   // 创建新角色
   Future<void> createNewPlayer(String name) async {
     _player = Player(name: name);
+    
+    // 添加一些初始装备到背包
+    _globalInventory = [
+      EquipmentItem('新手剑', '攻击力 +10', Icons.flash_on, Colors.green, 1, attackBonus: 10),
+      EquipmentItem('布甲', '防御力 +8', Icons.shield, Colors.blue, 2, defenseBonus: 8),
+      EquipmentItem('法师帽', '法力值 +15', Icons.auto_awesome, Colors.purple, 3, manaBonus: 15),
+    ];
+    
     await _saveGameData();
     notifyListeners();
   }
@@ -187,6 +200,10 @@ class GameProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final playerJson = jsonEncode(_player!.toJson());
     await prefs.setString('player_data', playerJson);
+    
+    // 保存装备数据
+    final equipmentJson = jsonEncode(_globalInventory.map((e) => e.toJson()).toList());
+    await prefs.setString('equipment_data', equipmentJson);
   }
 
   // 加载游戏数据
@@ -198,6 +215,16 @@ class GameProvider extends ChangeNotifier {
       try {
         final playerData = jsonDecode(playerJson);
         _player = Player.fromJson(playerData);
+        
+        // 加载装备数据
+        final equipmentJson = prefs.getString('equipment_data');
+        if (equipmentJson != null) {
+          final equipmentList = jsonDecode(equipmentJson) as List;
+          _globalInventory = equipmentList.map((e) => EquipmentItem.fromJson(e)).toList();
+        } else {
+          _globalInventory = [];
+        }
+        
         _calculateOfflineRewards();
         
         // 如果之前开启了自动修炼，重新开始
@@ -226,6 +253,29 @@ class GameProvider extends ChangeNotifier {
     await prefs.remove('player_data');
     
     notifyListeners();
+  }
+
+  // 添加装备到全局背包
+  void addEquipmentToInventory(EquipmentItem equipment) {
+    _globalInventory.add(equipment);
+    debugPrint('📦 装备添加成功: ${equipment.name}');
+    _saveGameData();
+    notifyListeners();
+  }
+
+  // 从全局背包移除装备
+  void removeEquipmentFromInventory(EquipmentItem equipment) {
+    _globalInventory.remove(equipment);
+    _saveGameData();
+    notifyListeners();
+  }
+
+  // 从商店购买装备
+  void purchaseEquipmentFromShop(String itemName, String description, int itemId) {
+    final equipment = EquipmentItem.fromShopItem(itemName, description, itemId);
+    addEquipmentToInventory(equipment);
+    debugPrint('🎒 装备已添加到背包: ${equipment.name}, 攻击+${equipment.attackBonus}, 防御+${equipment.defenseBonus}');
+    debugPrint('🎒 当前背包装备数量: ${_globalInventory.length}');
   }
 
   @override
