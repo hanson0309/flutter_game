@@ -1,7 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'cultivation_realm.dart';
 import 'technique.dart';
-import 'equipment.dart';
 
 part 'player.g.dart';
 
@@ -33,9 +32,6 @@ class Player {
   // 功法系统
   List<LearnedTechnique> learnedTechniques;
   
-  // 装备系统
-  Map<String, EquippedItem?> equippedItems; // key: EquipmentType.name
-  List<EquippedItem> inventory;
 
   Player({
     required this.name,
@@ -53,18 +49,9 @@ class Player {
     this.spiritStones = 1000,
     this.cultivationPoints = 0,
     List<LearnedTechnique>? learnedTechniques,
-    Map<String, EquippedItem?>? equippedItems,
-    List<EquippedItem>? inventory,
   }) : currentHealth = currentHealth ?? baseHealth * CultivationRealm.getRealmByLevel(level).attributeMultipliers['health']!,
        currentMana = currentMana ?? baseMana * CultivationRealm.getRealmByLevel(level).attributeMultipliers['mana']!,
-       learnedTechniques = learnedTechniques ?? [],
-       equippedItems = equippedItems ?? {
-         'weapon': null,
-         'armor': null,
-         'accessory': null,
-         'treasure': null,
-       },
-       inventory = inventory ?? [];
+       learnedTechniques = learnedTechniques ?? [];
 
   factory Player.fromJson(Map<String, dynamic> json) => _$PlayerFromJson(json);
   Map<String, dynamic> toJson() => _$PlayerToJson(this);
@@ -80,29 +67,25 @@ class Player {
     return null;
   }
 
-  // 计算实际属性（基础属性 * 境界加成 * 装备加成 * 功法加成）
+  // 计算实际属性（基础属性 * 境界加成 * 功法加成）
   double get actualAttack {
     double base = baseAttack * currentRealm.attributeMultipliers['attack']!;
-    double equipBonus = _getEquipmentStat('attack');
-    return base + equipBonus;
+    return base;
   }
   
   double get actualDefense {
     double base = baseDefense * currentRealm.attributeMultipliers['defense']! * defenseMultiplier;
-    double equipBonus = _getEquipmentStat('defense');
-    return base + equipBonus;
+    return base;
   }
   
   double get actualMaxHealth {
     double base = baseHealth * currentRealm.attributeMultipliers['health']! * healthMultiplier;
-    double equipBonus = _getEquipmentStat('health');
-    return base + equipBonus;
+    return base;
   }
   
   double get actualMaxMana {
     double base = baseMana * currentRealm.attributeMultipliers['mana']!;
-    double equipBonus = _getEquipmentStat('mana');
-    return base + equipBonus;
+    return base;
   }
 
   // 获取当前境界升级所需经验
@@ -319,117 +302,34 @@ class Player {
     return multiplier;
   }
 
-  // 装备相关方法
-  
-  // 获取装备属性加成
-  double _getEquipmentStat(String statName) {
-    double total = 0.0;
-    for (final equippedItem in equippedItems.values) {
-      if (equippedItem != null) {
-        final stats = equippedItem.getCurrentStats();
-        total += stats[statName] ?? 0.0;
-      }
-    }
-    return total;
-  }
-  
-  // 装备物品
-  bool equipItem(EquippedItem item) {
-    final equipment = item.equipment;
-    if (equipment == null) return false;
-    
-    // 检查等级要求
-    if (level < equipment.requiredLevel) return false;
-    
-    final slotKey = equipment.type.name;
-    
-    // 如果已有装备，放回背包
-    final currentEquipped = equippedItems[slotKey];
-    if (currentEquipped != null) {
-      inventory.add(currentEquipped);
-    }
-    
-    // 装备新物品
-    equippedItems[slotKey] = item;
-    inventory.remove(item);
-    
-    return true;
-  }
-  
-  // 卸下装备
-  bool unequipItem(EquipmentType type) {
-    final slotKey = type.name;
-    final equippedItem = equippedItems[slotKey];
-    
-    if (equippedItem == null) return false;
-    
-    equippedItems[slotKey] = null;
-    inventory.add(equippedItem);
-    
-    return true;
-  }
-  
-  // 强化装备
-  bool enhanceEquipment(EquipmentType type) {
-    final slotKey = type.name;
-    final equippedItem = equippedItems[slotKey];
-    
-    if (equippedItem == null) return false;
-    
-    final cost = equippedItem.getNextEnhanceCost();
-    if (spiritStones < cost) return false;
-    
-    if (equippedItem.enhance()) {
-      spiritStones -= cost;
-      return true;
-    }
-    
-    return false;
-  }
-  
-  // 添加物品到背包
-  void addItemToInventory(String equipmentId) {
-    final equipment = Equipment.getEquipmentById(equipmentId);
-    if (equipment != null) {
-      inventory.add(EquippedItem(equipmentId: equipmentId));
-    }
-  }
-  
-  // 获取装备的总战力
+  // 获取总战力
   int get totalPower {
     double power = actualAttack + actualDefense + (actualMaxHealth / 10) + (actualMaxMana / 5);
-    
-    // 加上装备特殊属性的战力
-    power += _getEquipmentStat('critical_rate') * 1000;
-    power += _getEquipmentStat('critical_damage') * 500;
-    power += _getEquipmentStat('skill_damage') * 800;
-    power += _getEquipmentStat('damage_reduction') * 1200;
-    
     return power.round();
   }
   
   // 获取暴击率
   double get criticalRate {
-    return _getEquipmentStat('critical_rate');
+    return 0.0;
   }
   
   // 获取暴击伤害
   double get criticalDamage {
-    return _getEquipmentStat('critical_damage');
+    return 0.0;
   }
   
   // 获取技能伤害加成
   double get skillDamageBonus {
-    return _getEquipmentStat('skill_damage');
+    return 0.0;
   }
   
   // 获取伤害减免
   double get damageReduction {
-    return _getEquipmentStat('damage_reduction');
+    return 0.0;
   }
   
   // 获取闪避率
   double get dodgeRate {
-    return _getEquipmentStat('dodge_rate');
+    return 0.0;
   }
 }

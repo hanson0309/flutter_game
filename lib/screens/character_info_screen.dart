@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/player.dart';
-import '../models/equipment.dart';
 import '../providers/game_provider.dart';
 import '../widgets/swipe_back_wrapper.dart';
+
+// 装备项数据类
+class EquipmentItem {
+  final String name;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final int id;
+  final double attackBonus;
+  final double defenseBonus;
+  final double healthBonus;
+  final double manaBonus;
+  
+  EquipmentItem(
+    this.name, 
+    this.description, 
+    this.icon, 
+    this.color, 
+    this.id, {
+    this.attackBonus = 0,
+    this.defenseBonus = 0,
+    this.healthBonus = 0,
+    this.manaBonus = 0,
+  });
+}
 
 class CharacterInfoScreen extends StatefulWidget {
   const CharacterInfoScreen({super.key});
@@ -12,924 +36,1109 @@ class CharacterInfoScreen extends StatefulWidget {
   State<CharacterInfoScreen> createState() => _CharacterInfoScreenState();
 }
 
-class _CharacterInfoScreenState extends State<CharacterInfoScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _floatingController;
-  late Animation<double> _floatingAnimation;
+class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
+  // 装备栏数据 - 8个槽位（左4个，右4个）
+  List<EquipmentItem?> equippedItems = List.filled(8, null);
+  
+  // 背包装备数据
+  List<EquipmentItem> inventoryEquipment = [
+    EquipmentItem('青铜剑', '攻击力 +15', Icons.flash_on, Colors.green, 0, attackBonus: 15),
+    EquipmentItem('铁甲', '防御力 +12', Icons.shield, Colors.blue, 1, defenseBonus: 12),
+    EquipmentItem('法师帽', '法力值 +20', Icons.auto_awesome, Colors.purple, 2, manaBonus: 20),
+    EquipmentItem('皮靴', '速度 +5', Icons.directions_run, Colors.brown, 3, defenseBonus: 5),
+    EquipmentItem('护手', '防御力 +8', Icons.back_hand, Colors.grey, 4, defenseBonus: 8),
+    EquipmentItem('项链', '生命值 +25', Icons.circle, Colors.red, 5, healthBonus: 25),
+  ];
 
-  // 格式化灵石显示
-  String _formatSpiritStones(int spiritStones) {
-    if (spiritStones >= 100000000) {
-      return '${(spiritStones / 100000000).toStringAsFixed(2)}亿';
-    } else if (spiritStones >= 10000) {
-      return '${(spiritStones / 10000).toStringAsFixed(1)}万';
-    } else {
-      return spiritStones.toString();
-    }
+  // 计算装备加成
+  double get equipmentAttackBonus {
+    return equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.attackBonus);
   }
 
-
-  @override
-  void initState() {
-    super.initState();
-    _floatingController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _floatingAnimation = Tween<double>(begin: -3, end: 3).animate(
-      CurvedAnimation(parent: _floatingController, curve: Curves.easeInOut),
-    );
+  double get equipmentDefenseBonus {
+    return equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.defenseBonus);
   }
 
-  @override
-  void dispose() {
-    _floatingController.dispose();
-    super.dispose();
+  double get equipmentHealthBonus {
+    return equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.healthBonus);
   }
+
+  double get equipmentManaBonus {
+    return equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.manaBonus);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SwipeBackScaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/backgrounds/info_background.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF16213e).withOpacity(0.8),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Consumer<GameProvider>(
-          builder: (context, gameProvider, child) {
-            final player = gameProvider.player!;
-            return Row(
-              children: [
-                // 左侧：境界和等级
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(
-                    '${player.currentRealm.name} ${(player.levelProgress * 100).toStringAsFixed(1)}%',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-                const Spacer(),
-                // 右侧：资源
-                Row(
-                  children: [
-                    const Icon(Icons.diamond, color: Colors.blue, size: 16),
-                    Text(' ${_formatSpiritStones(player.spiritStones)}', 
-                         style: const TextStyle(color: Colors.white, fontSize: 12)),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+      backgroundColor: const Color(0xFF0a0a1a),
       body: Consumer<GameProvider>(
         builder: (context, gameProvider, child) {
           final player = gameProvider.player!;
           
-          return Column(
+          return Stack(
             children: [
-              // 主要游戏区域
-              _buildMainGameArea(player, gameProvider),
-              
-              // 固定的气血真元条
-              _buildHealthBarsContainer(player),
-              
-              // 可滚动的属性区域
-              _buildScrollableAttributes(player),
+              // 背景渐变
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF1a1a3a),
+                      Color(0xFF0a0a1a),
+                    ],
+                  ),
+                ),
+              ),
+              // 主要内容
+              Column(
+                children: [
+                  // 顶部区域 - 返回按钮和等级
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          // 返回按钮
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                          ),
+                          const Spacer(),
+                          // 背包按钮
+                          IconButton(
+                            onPressed: () => _showInventory(context),
+                            icon: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.amber.withOpacity(0.2),
+                                border: Border.all(
+                                  color: Colors.amber.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.backpack,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // 等级信息
+                          Consumer<GameProvider>(
+                            builder: (context, gameProvider, child) {
+                              final player = gameProvider.player!;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.cyan.withOpacity(0.2),
+                                      Colors.blue.withOpacity(0.2),
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.cyan.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  player.currentRealm.name,
+                                  style: const TextStyle(
+                                    color: Colors.cyan,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // 人物区域 - 占据大部分页面
+                  Expanded(
+                    flex: 10,
+                    child: _buildCharacterArea(context, player),
+                  ),
+                  // 血条和蓝条
+                  _buildHealthManaBar(player),
+                  // 属性信息区域
+                  Expanded(
+                    flex: 2,
+                    child: _buildAttributesArea(player),
+                  ),
+                ],
+              ),
             ],
           );
         },
       ),
-        ),
+    );
+  }
+
+  // 人物区域 - 占据大部分页面
+  Widget _buildCharacterArea(BuildContext context, Player player) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          // 左侧格子区域
+          _buildSideSlots(context, true),
+          // 人物区域
+          Expanded(
+            flex: 3,
+            child: Container(
+              child: Image.asset(
+                'assets/images/characters/character_stand.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  // 如果图片加载失败，显示默认图标
+                  return Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.cyan.withOpacity(0.2),
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      size: 400,
+                      color: Colors.cyan.withOpacity(0.8),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // 右侧格子区域
+          _buildSideSlots(context, false),
+        ],
       ),
     );
   }
 
-
-  // 主要游戏区域
-  Widget _buildMainGameArea(Player player, GameProvider gameProvider) {
+  // 构建左右两侧的格子
+  Widget _buildSideSlots(BuildContext context, bool isLeft) {
     return Container(
-      height: 600, // 增加人物装备区域的高度
-      child: Stack(
-        children: [
-          // 背景人物图片（主页同款浮动效果）
-          Positioned(
-            left: 0, // 居中显示
-            right: 100, // 给装备留适当空间
-            top: 0, // 从顶部开始
-            bottom: 0, // 到底部结束
-            child: AnimatedBuilder(
-              animation: _floatingAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _floatingAnimation.value * 2), // 轻微浮动，和主页一样
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('images/characters/character_stand.png'),
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                );
-              },
+      width: 80,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(4, (index) {
+          final slotIndex = isLeft ? index : index + 4;
+          final equippedItem = equippedItems[slotIndex];
+          
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 20),
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: equippedItem != null 
+                    ? equippedItem.color.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
+              color: equippedItem != null 
+                  ? equippedItem.color.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.2),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _handleSlotTap(context, slotIndex),
+                child: Center(
+                  child: equippedItem != null
+                      ? Icon(
+                          equippedItem.icon,
+                          color: equippedItem.color,
+                          size: 24,
+                        )
+                      : Icon(
+                          Icons.add,
+                          color: Colors.white.withOpacity(0.5),
+                          size: 20,
+                        ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // 处理装备槽位点击
+  void _handleSlotTap(BuildContext context, int slotIndex) {
+    final equippedItem = equippedItems[slotIndex];
+    
+    if (equippedItem != null) {
+      // 如果已有装备，显示装备详情和卸载选项
+      _showEquippedItemDialog(context, slotIndex, equippedItem);
+    } else {
+      // 如果没有装备，显示装备选择界面
+      _showEquipmentSelection(context, slotIndex);
+    }
+  }
+
+  // 显示已装备物品的详情对话框
+  void _showEquippedItemDialog(BuildContext context, int slotIndex, EquipmentItem item) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1a1a2e),
+          title: Text(
+            item.name,
+            style: TextStyle(
+              color: item.color,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          
-          // 右侧装备网格
-          Positioned(
-            right: 16,
-            top: 20,
-            child: _buildRightEquipmentGrid(player, gameProvider),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                item.icon,
+                color: item.color,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                item.description,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _unequipItem(slotIndex);
+              },
+              child: const Text(
+                '卸载',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                '取消',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 显示装备选择对话框
+  void _showEquipmentSelection(BuildContext context, int slotIndex) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Consumer<GameProvider>(
+          builder: (context, gameProvider, child) {
+            final player = gameProvider.player!;
+            
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1a1a2e),
+              title: Text(
+                '选择装备',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Container(
+                width: double.maxFinite,
+                height: 300,
+                child: Column(
+                  children: [
+                    Text(
+                      '选择要装备的物品 - 槽位 ${slotIndex + 1}',
+                      style: const TextStyle(
+                        color: Colors.cyan,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView(
+                        children: inventoryEquipment
+                            .where((item) => !equippedItems.contains(item))
+                            .map((item) => _buildSelectableEquipmentItem(context, item, slotIndex))
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    '取消',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 显示背包界面
+  void _showInventory(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Consumer<GameProvider>(
+          builder: (context, gameProvider, child) {
+            final player = gameProvider.player!;
+            
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1a1a2e),
+              title: const Text(
+                '背包',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Container(
+                width: double.maxFinite,
+                height: 400,
+                child: DefaultTabController(
+                  length: 2,
+                  child: Column(
+                    children: [
+                      // 标签栏
+                      TabBar(
+                        indicatorColor: Colors.amber,
+                        labelColor: Colors.amber,
+                        unselectedLabelColor: Colors.white70,
+                        tabs: const [
+                          Tab(text: '装备'),
+                          Tab(text: '道具'),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // 标签内容
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            // 装备标签
+                            _buildEquipmentTab(context),
+                            // 道具标签
+                            _buildItemsTab(context),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    '关闭',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 装备标签内容
+  Widget _buildEquipmentTab(BuildContext context) {
+    return ListView(
+      children: inventoryEquipment
+          .map((item) => _buildInventoryEquipmentItem(context, item))
+          .toList(),
+    );
+  }
+
+  // 构建背包中的装备项
+  Widget _buildInventoryEquipmentItem(BuildContext context, EquipmentItem item) {
+    final isEquipped = equippedItems.contains(item);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(
+          color: isEquipped ? Colors.green.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: item.color.withOpacity(0.2),
+            ),
+            child: Icon(
+              item.icon,
+              color: item.color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        color: item.color,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (isEquipped) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.green.withOpacity(0.2),
+                        ),
+                        child: const Text(
+                          '已装备',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                Text(
+                  item.description,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isEquipped)
+            const Icon(
+              Icons.check_circle,
+              color: Colors.green,
+              size: 20,
+            )
+          else
+            const Text(
+              'x1',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 道具标签内容
+  Widget _buildItemsTab(BuildContext context) {
+    return ListView(
+      children: [
+        _buildInventoryItem(context, '回血丹', '恢复100点生命值', Icons.healing, Colors.red),
+        _buildInventoryItem(context, '回蓝丹', '恢复80点法力值', Icons.water_drop, Colors.blue),
+        _buildInventoryItem(context, '经验丹', '获得50点经验', Icons.star, Colors.yellow),
+        _buildInventoryItem(context, '灵石', '修炼货币', Icons.diamond, Colors.amber),
+        _buildInventoryItem(context, '功法卷轴', '学习新功法', Icons.article, Colors.purple),
+      ],
+    );
+  }
+
+  // 构建背包物品
+  Widget _buildInventoryItem(BuildContext context, String name, String description, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: color.withOpacity(0.2),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            'x1',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
           ),
         ],
       ),
     );
   }
 
-
-  // 右侧装备网格 (12个装备槽位，充分利用空间)
-  Widget _buildRightEquipmentGrid(Player player, GameProvider gameProvider) {
+  // 构建装备项
+  Widget _buildEquipmentItem(BuildContext context, String name, String description) {
     return Container(
-      width: 110, // 稍微增加宽度以适应更好的间距
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: Colors.amber.withOpacity(0.2),
+            ),
+            child: const Icon(
+              Icons.shield,
+              color: Colors.amber,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              // 这里处理装备选择逻辑
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('已装备: $name'),
+                  backgroundColor: Colors.green.withOpacity(0.8),
+                ),
+              );
+            },
+            icon: const Icon(
+              Icons.add_circle,
+              color: Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 血条和蓝条
+  Widget _buildHealthManaBar(Player player) {
+    final totalMaxHealth = player.actualMaxHealth + equipmentHealthBonus;
+    final totalMaxMana = player.actualMaxMana + equipmentManaBonus;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
         children: [
-          // 第一行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('武器', Colors.yellow, EquipmentType.weapon, player, gameProvider),
-              const SizedBox(width: 8), // 增加间距
-              _buildEquipmentGridSlot('护甲', Colors.purple, EquipmentType.armor, player, gameProvider),
-            ],
+          // 血条
+          _buildBar(
+            '生命值',
+            player.currentHealth,
+            totalMaxHealth,
+            Colors.red,
+            Colors.red.withOpacity(0.3),
+            Icons.favorite,
           ),
-          const SizedBox(height: 10), // 稍微减少行间距以容纳更多装备
-          // 第二行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('饰品', Colors.green, EquipmentType.accessory, player, gameProvider),
-              const SizedBox(width: 8),
-              _buildEquipmentGridSlot('法宝', Colors.purple, EquipmentType.treasure, player, gameProvider),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第三行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('戒指', Colors.yellow, EquipmentType.ring, player, gameProvider),
-              const SizedBox(width: 8),
-              _buildEquipmentGridSlot('项链', Colors.green, EquipmentType.necklace, player, gameProvider),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第四行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('靴子', Colors.green, EquipmentType.boots, player, gameProvider),
-              const SizedBox(width: 8),
-              _buildEquipmentGridSlot('腰带', Colors.green, EquipmentType.belt, player, gameProvider),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第五行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('手套', Colors.blue, EquipmentType.gloves, player, gameProvider),
-              const SizedBox(width: 8),
-              _buildEquipmentGridSlot('头盔', Colors.blue, EquipmentType.helmet, player, gameProvider),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 第六行
-          Row(
-            children: [
-              _buildEquipmentGridSlot('符文', Colors.red, EquipmentType.rune, player, gameProvider),
-              const SizedBox(width: 8),
-              _buildEquipmentGridSlot('宝石', Colors.cyan, EquipmentType.gem, player, gameProvider),
-            ],
+          const SizedBox(height: 8),
+          // 蓝条
+          _buildBar(
+            '法力值',
+            player.currentMana,
+            totalMaxMana,
+            Colors.blue,
+            Colors.blue.withOpacity(0.3),
+            Icons.auto_awesome,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEquipmentGridSlot(String name, Color borderColor, EquipmentType type, Player player, GameProvider gameProvider) {
-    final equippedItem = player.equippedItems[type.name];
+  Widget _buildBar(String label, double current, double max, Color color, Color backgroundColor, IconData icon) {
+    final percentage = max > 0 ? current / max : 0.0;
     
-    return GestureDetector(
-      onTap: () => _showEquipmentOptions(type, gameProvider),
-      child: Container(
-        width: 50, // 稍微增加尺寸以配合更好的间距
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: equippedItem != null ? borderColor : borderColor.withOpacity(0.5), 
-            width: 2
-          ),
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: Icon(
-                _getEquipmentIcon(type),
-                color: equippedItem != null ? borderColor : Colors.white70,
-                size: 24,
-              ),
-            ),
-            if (equippedItem != null && equippedItem.enhanceLevel > 0)
-              Positioned(
-                bottom: 2,
-                right: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '+${equippedItem.enhanceLevel}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  // 固定的血条容器（透明，上移）
-  Widget _buildHealthBarsContainer(Player player) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8), // 上移，去掉顶部padding
-      child: _buildHealthBars(player),
-    );
-  }
-
-  // 压缩的属性区域
-  Widget _buildScrollableAttributes(Player player) {
-    return Expanded(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8), // 减少padding
-          child: Column(
-            children: [
-              // 压缩的属性显示
-              _buildAttributePanel(player),
-              const SizedBox(height: 8), // 减少间距
-              
-              // 压缩的角色信息
-              _buildCharacterInfo(player),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHealthBars(Player player) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 气血区域
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
           children: [
-            // 气血标签（在条形外面）
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 2),
-              child: Text(
-                '气血',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            // 气血条
-            Container(
-              height: 16,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red, width: 1),
-              ),
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: LinearGradient(
-                        colors: [Colors.red[800]!, Colors.red[400]!],
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Text(
-                      '${player.currentHealth}/${player.actualMaxHealth.round()}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+            const Spacer(),
+            Text(
+              '${current.toStringAsFixed(0)}/${max.toStringAsFixed(0)}',
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        // 真元区域
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 真元标签（在条形外面）
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 2),
-              child: Text(
-                '真元',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+        const SizedBox(height: 6),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: backgroundColor,
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: percentage,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                gradient: LinearGradient(
+                  colors: [color, color.withOpacity(0.7)],
                 ),
               ),
             ),
-            // 真元条
-            Container(
-              height: 16,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue, width: 1),
-              ),
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[800]!, Colors.blue[400]!],
-                      ),
-                    ),
-                  ),
-                  Center(
-                    child: Text(
-                      '${player.currentMana}/${player.actualMaxMana.round()}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildAttributePanel(Player player) {
+  // 属性信息区域
+  Widget _buildAttributesArea(Player player) {
     return Container(
-      padding: const EdgeInsets.all(8), // 减少padding
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.black.withOpacity(0.8),
-            Colors.grey[900]!.withOpacity(0.6),
+      padding: const EdgeInsets.all(20),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildAttributesSection(player),
+            const SizedBox(height: 16),
+            _buildCultivationSection(player),
+            const SizedBox(height: 16),
+            _buildResourcesSection(player),
           ],
         ),
-        borderRadius: BorderRadius.circular(12), // 减少圆角
+      ),
+    );
+  }
+
+  Widget _buildAttributesSection(Player player) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.grey[600]!.withOpacity(0.5),
+          color: Colors.white.withOpacity(0.1),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 4, // 减少阴影
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const Text(
+            '属性',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildAttributeRow('总战力', (player.totalPower + equipmentAttackBonus + equipmentDefenseBonus).toStringAsFixed(0), Colors.amber, Icons.star),
+          _buildEnhancedAttributeRow('攻击力', player.actualAttack, equipmentAttackBonus, Colors.red, Icons.flash_on),
+          _buildEnhancedAttributeRow('防御力', player.actualDefense, equipmentDefenseBonus, Colors.blue, Icons.security),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCultivationSection(Player player) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '修炼信息',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildAttributeRow('当前经验', '${player.currentExp}/${player.currentRealm.maxExp}', Colors.yellow, Icons.star),
+          _buildAttributeRow('总经验', player.totalExp.toString(), Colors.orange, Icons.trending_up),
+          _buildAttributeRow('修炼点', player.cultivationPoints.toString(), Colors.purple, Icons.auto_awesome),
+          const SizedBox(height: 12),
+          // 升级进度条
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.assessment, color: Colors.white, size: 16), // 减少图标大小
-              const SizedBox(width: 6),
-              const Text(
-                '属性',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14, // 减少字体大小
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '升级进度',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  Text(
+                    '${(player.levelProgress * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(color: Colors.cyan, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: Colors.grey.withOpacity(0.3),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: player.levelProgress,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      gradient: const LinearGradient(
+                        colors: [Colors.cyan, Colors.blue],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8), // 减少间距
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatItem('攻击', '${player.actualAttack.round()}', Icons.flash_on, Colors.red, Colors.red[100]!),
-              ),
-              const SizedBox(width: 8), // 减少间距
-              Expanded(
-                child: _buildEnhancedStatItem('防御', '${player.actualDefense.round()}', Icons.shield, Colors.blue, Colors.blue[100]!),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8), // 减少间距
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatItem('生命', '${player.actualMaxHealth.round()}', Icons.favorite, Colors.red, Colors.red[100]!),
-              ),
-              const SizedBox(width: 8), // 减少间距
-              Expanded(
-                child: _buildEnhancedStatItem('法力', '${player.actualMaxMana.round()}', Icons.auto_awesome, Colors.blue, Colors.blue[100]!),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8), // 减少间距
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatItem('修炼速度', '${(player.cultivationSpeedMultiplier * 100).toStringAsFixed(1)}%', Icons.trending_up, Colors.green, Colors.green[100]!),
-              ),
-              const SizedBox(width: 8), // 减少间距
-              Expanded(
-                child: _buildEnhancedStatItem('经验加成', '${(player.expBonusMultiplier * 100 - 100).toStringAsFixed(1)}%', Icons.star, Colors.orange, Colors.orange[100]!),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8), // 减少间距
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatItem('暴击率', '${(player.criticalRate * 100).toStringAsFixed(1)}%', Icons.flash_auto, Colors.yellow, Colors.yellow[100]!),
-              ),
-              const SizedBox(width: 8), // 减少间距
-              Expanded(
-                child: _buildEnhancedStatItem('暴击伤害', '${(player.criticalDamage * 100).toStringAsFixed(1)}%', Icons.whatshot, Colors.red, Colors.red[100]!),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8), // 减少间距
-          Row(
-            children: [
-              Expanded(
-                child: _buildEnhancedStatItem('伤害减免', '${(player.damageReduction * 100).toStringAsFixed(1)}%', Icons.security, Colors.purple, Colors.purple[100]!),
-              ),
-              const SizedBox(width: 8), // 减少间距
-              Expanded(
-                child: _buildEnhancedStatItem('闪避率', '${(player.dodgeRate * 100).toStringAsFixed(1)}%', Icons.speed, Colors.cyan, Colors.cyan[100]!),
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildCharacterInfo(Player player) {
+  Widget _buildResourcesSection(Player player) {
     return Container(
-      padding: const EdgeInsets.all(8), // 减少padding
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.blueGrey[800]!.withOpacity(0.7),
-            Colors.black.withOpacity(0.5),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12), // 减少圆角
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.blueGrey[600]!.withOpacity(0.6),
+          color: Colors.white.withOpacity(0.1),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 3, // 减少阴影
-            offset: const Offset(0, 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '资源',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          const SizedBox(height: 12),
+          _buildAttributeRow('灵石', player.spiritStones.toString(), Colors.amber, Icons.diamond),
+          _buildAttributeRow('已学功法', player.learnedTechniques.length.toString(), Colors.purple, Icons.menu_book),
         ],
       ),
+    );
+  }
+
+  Widget _buildAttributeRow(String label, String value, Color valueColor, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Expanded(
-            child: _buildEnhancedInfoItem('等级', '${player.level}', Icons.star, Colors.yellow),
-          ),
-          Container(
-            width: 1,
-            height: 30, // 减少分隔线高度
-            color: Colors.grey[600]!.withOpacity(0.5),
-          ),
-          Expanded(
-            child: _buildEnhancedInfoItem('境界', player.currentRealm.name, Icons.trending_up, Colors.orange),
-          ),
-          Container(
-            width: 1,
-            height: 30, // 减少分隔线高度
-            color: Colors.grey[600]!.withOpacity(0.5),
-          ),
-          Expanded(
-            child: _buildEnhancedInfoItem('灵石', _formatSpiritStones(player.spiritStones), Icons.diamond, Colors.cyan),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildEnhancedStatItem(String label, String value, IconData icon, Color primaryColor, Color backgroundColor) {
-    return Container(
-      padding: const EdgeInsets.all(6), // 减少padding
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            primaryColor.withOpacity(0.2),
-            primaryColor.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(8), // 减少圆角
-        border: Border.all(
-          color: primaryColor.withOpacity(0.4),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withOpacity(0.1),
-            blurRadius: 2, // 减少阴影
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: primaryColor,
-            size: 18, // 减少图标大小
-          ),
-          const SizedBox(height: 4), // 减少间距
+          Icon(icon, color: valueColor, size: 16),
+          const SizedBox(width: 12),
           Text(
             label,
-            style: TextStyle(
-              color: primaryColor,
-              fontSize: 10, // 减少字体大小
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
-          const SizedBox(height: 2), // 减少间距
+          const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12, // 减少字体大小
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEnhancedInfoItem(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
             style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
+              color: valueColor,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  // 获取装备类型对应的图标
-  IconData _getEquipmentIcon(EquipmentType type) {
-    switch (type) {
-      case EquipmentType.weapon:
-        return Icons.flash_on;
-      case EquipmentType.armor:
-        return Icons.shield;
-      case EquipmentType.accessory:
-        return Icons.circle;
-      case EquipmentType.treasure:
-        return Icons.auto_awesome;
-      case EquipmentType.ring:
-        return Icons.radio_button_unchecked;
-      case EquipmentType.necklace:
-        return Icons.favorite;
-      case EquipmentType.boots:
-        return Icons.directions_walk;
-      case EquipmentType.belt:
-        return Icons.horizontal_rule;
-      case EquipmentType.gloves:
-        return Icons.back_hand;
-      case EquipmentType.helmet:
-        return Icons.security;
-      case EquipmentType.rune:
-        return Icons.auto_fix_high;
-      case EquipmentType.gem:
-        return Icons.diamond;
-    }
-  }
-
-  // 显示装备选项对话框
-  void _showEquipmentOptions(EquipmentType type, GameProvider gameProvider) {
-    final player = gameProvider.player!;
-    final equippedItem = player.equippedItems[type.name];
+  // 增强属性行 - 显示基础属性和装备加成
+  Widget _buildEnhancedAttributeRow(String label, double baseValue, double equipmentBonus, Color valueColor, IconData icon) {
+    final totalValue = baseValue + equipmentBonus;
     
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2a2a3e),
-          title: Text(
-            '${_getEquipmentTypeName(type)}',
-            style: const TextStyle(color: Colors.white),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: valueColor, size: 16),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+          const Spacer(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (equippedItem != null) ...[
+              Text(
+                totalValue.toStringAsFixed(1),
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (equipmentBonus > 0)
                 Text(
-                  equippedItem.equipment!.name,
+                  '${baseValue.toStringAsFixed(1)} + ${equipmentBonus.toStringAsFixed(1)}',
                   style: TextStyle(
-                    color: _getItemRarityColor(equippedItem.equipment!.rarity),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    color: Colors.green.withOpacity(0.8),
+                    fontSize: 10,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  equippedItem.equipment!.description,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '强化等级: +${equippedItem.enhanceLevel}',
-                  style: const TextStyle(color: Color(0xFFe94560)),
-                ),
-                Text(
-                  '攻击力: +${equippedItem.equipment!.baseStats['attack'] ?? 0}',
-                  style: const TextStyle(color: Colors.green),
-                ),
-                Text(
-                  '防御力: +${equippedItem.equipment!.baseStats['defense'] ?? 0}',
-                  style: const TextStyle(color: Colors.blue),
-                ),
-              ] else ...[
-                const Text(
-                  '未装备',
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '可以在背包中选择装备',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ],
             ],
           ),
-          actions: [
-            if (equippedItem != null)
-              TextButton(
-                onPressed: () {
-                  gameProvider.unequipItem(type);
-                  Navigator.pop(context);
-                },
-                child: const Text('卸下', style: TextStyle(color: Colors.red)),
-              ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showEquipmentSelection(type, gameProvider);
-              },
-              child: const Text('装备', style: TextStyle(color: Colors.green)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('关闭', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
-  // 获取装备类型名称
-  String _getEquipmentTypeName(EquipmentType type) {
-    switch (type) {
-      case EquipmentType.weapon:
-        return '武器';
-      case EquipmentType.armor:
-        return '护甲';
-      case EquipmentType.accessory:
-        return '饰品';
-      case EquipmentType.treasure:
-        return '法宝';
-      case EquipmentType.ring:
-        return '戒指';
-      case EquipmentType.necklace:
-        return '项链';
-      case EquipmentType.boots:
-        return '靴子';
-      case EquipmentType.belt:
-        return '腰带';
-      case EquipmentType.gloves:
-        return '手套';
-      case EquipmentType.helmet:
-        return '头盔';
-      case EquipmentType.rune:
-        return '符文';
-      case EquipmentType.gem:
-        return '宝石';
-    }
-  }
-
-  // 获取物品稀有度颜色
-  Color _getItemRarityColor(EquipmentRarity rarity) {
-    switch (rarity) {
-      case EquipmentRarity.common:
-        return Colors.white;
-      case EquipmentRarity.uncommon:
-        return Colors.green;
-      case EquipmentRarity.rare:
-        return Colors.blue;
-      case EquipmentRarity.epic:
-        return Colors.purple;
-      case EquipmentRarity.legendary:
-        return Colors.orange;
-      case EquipmentRarity.mythic:
-        return Colors.red;
-    }
-  }
-
-  // 显示装备选择对话框
-  void _showEquipmentSelection(EquipmentType type, GameProvider gameProvider) {
-    final player = gameProvider.player!;
+  // 卸载装备
+  void _unequipItem(int slotIndex) {
+    setState(() {
+      final unequippedItem = equippedItems[slotIndex];
+      if (unequippedItem != null) {
+        equippedItems[slotIndex] = null;
+        // 将装备放回背包（如果不在背包中）
+        if (!inventoryEquipment.contains(unequippedItem)) {
+          inventoryEquipment.add(unequippedItem);
+        }
+      }
+    });
     
-    // 获取对应类型的装备（从所有可用装备中筛选）
-    final availableEquipments = Equipment.availableEquipment
-        .where((equipment) => equipment.type == type)
-        .where((equipment) => player.level >= equipment.requiredLevel)
-        .toList();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('装备已卸载'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2a2a3e),
-          title: Text(
-            '选择${_getEquipmentTypeName(type)}',
-            style: const TextStyle(color: Colors.white),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 400,
-            child: availableEquipments.isEmpty
-                ? const Center(
-                    child: Text(
-                      '没有可装备的物品',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: availableEquipments.length,
-                    itemBuilder: (context, index) {
-                      final equipment = availableEquipments[index];
-                      return Card(
-                        color: const Color(0xFF3a3a4e),
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          leading: Icon(
-                            _getEquipmentIcon(equipment.type),
-                            color: _getItemRarityColor(equipment.rarity),
-                            size: 32,
-                          ),
-                          title: Text(
-                            equipment.name,
-                            style: TextStyle(
-                              color: _getItemRarityColor(equipment.rarity),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                equipment.description,
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '等级要求: ${equipment.requiredLevel}',
-                                style: const TextStyle(color: Colors.orange),
-                              ),
-                              if (equipment.baseStats.isNotEmpty)
-                                Text(
-                                  '属性: ${equipment.baseStats.entries.map((e) => '${e.key}+${e.value}').join(', ')}',
-                                  style: const TextStyle(color: Colors.green),
-                                ),
-                            ],
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.white70,
-                            size: 16,
-                          ),
-                          onTap: () {
-                            // 创建装备物品并装备
-                            final equippedItem = EquippedItem(
-                              equipmentId: equipment.id,
-                              enhanceLevel: 0,
-                            );
-                            
-                            if (gameProvider.equipItem(equippedItem)) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('成功装备 ${equipment.name}'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('装备失败'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('取消', style: TextStyle(color: Colors.white)),
+  // 装备物品
+  void _equipItem(EquipmentItem item, int slotIndex) {
+    setState(() {
+      // 如果槽位已有装备，先卸载
+      if (equippedItems[slotIndex] != null) {
+        final oldItem = equippedItems[slotIndex]!;
+        if (!inventoryEquipment.contains(oldItem)) {
+          inventoryEquipment.add(oldItem);
+        }
+      }
+      
+      // 装备新物品
+      equippedItems[slotIndex] = item;
+      inventoryEquipment.remove(item);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已装备: ${item.name}'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  // 构建可选择的装备项
+  Widget _buildSelectableEquipmentItem(BuildContext context, EquipmentItem item, int slotIndex) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white.withOpacity(0.05),
+        border: Border.all(
+          color: item.color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: item.color.withOpacity(0.2),
             ),
-          ],
-        );
-      },
+            child: Icon(
+              item.icon,
+              color: item.color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: TextStyle(
+                    color: item.color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  item.description,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _equipItem(item, slotIndex);
+            },
+            icon: const Icon(
+              Icons.add_circle,
+              color: Colors.green,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

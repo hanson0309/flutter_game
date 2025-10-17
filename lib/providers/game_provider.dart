@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/player.dart';
 import '../models/technique.dart';
-import '../models/equipment.dart';
 import '../services/achievement_service.dart';
 import '../services/audio_service.dart';
 import '../services/task_service.dart';
@@ -227,98 +226,6 @@ class GameProvider extends ChangeNotifier {
     await prefs.remove('player_data');
     
     notifyListeners();
-  }
-
-  // 装备物品
-  bool equipItem(EquippedItem equippedItem) {
-    if (_player == null) return false;
-    
-    final equipment = equippedItem.equipment;
-    if (equipment == null) return false;
-    
-    // 检查等级要求
-    if (_player!.level < equipment.requiredLevel) {
-      debugPrint('等级不足，需要等级 ${equipment.requiredLevel}');
-      return false;
-    }
-    
-    // 装备物品
-    _player!.equippedItems[equipment.type.name] = equippedItem;
-    
-    _saveGameData();
-    notifyListeners();
-    
-    debugPrint('装备了 ${equipment.name}');
-    return true;
-  }
-  
-  // 卸下装备
-  bool unequipItem(EquipmentType type) {
-    if (_player == null) return false;
-    
-    final equippedItem = _player!.equippedItems[type.name];
-    if (equippedItem == null) return false;
-    
-    // 卸下装备
-    _player!.equippedItems.remove(type.name);
-    
-    _saveGameData();
-    notifyListeners();
-    
-    debugPrint('卸下了 ${equippedItem.equipment?.name}');
-    return true;
-  }
-  
-  // 强化装备
-  bool enhanceEquipment(EquipmentType type) {
-    if (_player == null) return false;
-    
-    final equippedItem = _player!.equippedItems[type.name];
-    if (equippedItem == null) return false;
-    
-    final equipment = equippedItem.equipment;
-    if (equipment == null) return false;
-    
-    // 检查是否已达最大强化等级
-    if (equippedItem.enhanceLevel >= equipment.maxEnhanceLevel) {
-      debugPrint('装备已达最大强化等级');
-      return false;
-    }
-    
-    // 计算强化费用
-    final cost = equippedItem.getNextEnhanceCost();
-    if (_player!.spiritStones < cost) {
-      debugPrint('灵石不足，需要 $cost 灵石');
-      return false;
-    }
-    
-    // 扣除灵石并强化
-    _player!.spiritStones -= cost;
-    equippedItem.enhance();
-    
-    _saveGameData();
-    notifyListeners();
-    
-    debugPrint('强化 ${equipment.name} 到 +${equippedItem.enhanceLevel}');
-    return true;
-  }
-  
-  // 获取装备的总属性加成
-  Map<String, double> getEquipmentStats() {
-    if (_player == null) return {};
-    
-    Map<String, double> totalStats = {};
-    
-    for (final equippedItem in _player!.equippedItems.values) {
-      if (equippedItem != null) {
-        final stats = equippedItem.getCurrentStats();
-        for (final entry in stats.entries) {
-          totalStats[entry.key] = (totalStats[entry.key] ?? 0) + entry.value;
-        }
-      }
-    }
-    
-    return totalStats;
   }
 
   @override

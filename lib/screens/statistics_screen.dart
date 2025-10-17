@@ -479,26 +479,17 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Widget _buildEquipmentStatsCard(player) {
-    final equippedItems = player.equippedItems.values.where((item) => item != null).toList();
-    
     return _buildInfoCard(
       '装备统计',
       Icons.inventory,
       [
-        _buildStatRow('已装备', '${equippedItems.length}/4', Colors.cyan),
-        _buildStatRow('背包物品', '${player.inventory.length}', Colors.orange),
+        _buildStatRow('已装备', '0/0', Colors.cyan),
+        _buildStatRow('背包物品', '0', Colors.orange),
         const SizedBox(height: 8),
-        if (equippedItems.isNotEmpty)
-          ...equippedItems.map((item) {
-            final equipment = item!.equipment;
-            if (equipment == null) return const SizedBox.shrink();
-            
-            return _buildStatRow(
-              equipment.name,
-              '+${item.enhanceLevel}',
-              _getEquipmentRarityColor(equipment.rarity),
-            );
-          }).toList(),
+        const Text(
+          '装备系统已禁用',
+          style: TextStyle(color: Colors.grey, fontSize: 12),
+        ),
       ],
     );
   }
@@ -511,11 +502,6 @@ class _StatisticsScreenState extends State<StatisticsScreen>
     return Colors.red;
   }
 
-  Color _getEquipmentRarityColor(rarity) {
-    // 这里需要根据装备稀有度返回颜色
-    // 由于我没有看到Equipment的rarity定义，使用默认颜色
-    return Colors.cyan;
-  }
 
   String _getAchievementTypeName(AchievementType type) {
     switch (type) {

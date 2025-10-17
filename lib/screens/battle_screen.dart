@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/battle.dart';
 import '../models/player.dart';
-import '../models/inventory.dart';
 import '../services/battle_service.dart';
 import '../services/audio_service.dart';
-import '../services/inventory_service.dart';
 import '../providers/game_provider.dart';
 import '../widgets/battle_effects.dart';
 import '../widgets/swipe_back_wrapper.dart';
@@ -628,9 +626,9 @@ class _BattleScreenState extends State<BattleScreen> with TickerProviderStateMix
               
               ElevatedButton(
                 onPressed: () {
-                  // 如果战斗胜利且有掉落物品，添加到背包
+                  // 战斗胜利处理
                   if (battle.result != null && battle.state == BattleState.victory && battle.result!.itemsDropped.isNotEmpty) {
-                    _addItemsToInventory(battle.result!.itemsDropped, context);
+                    debugPrint('🎒 战斗掉落物品: ${battle.result!.itemsDropped}');
                   }
                   battleService.clearBattle();
                   Navigator.of(context).pop();
@@ -731,174 +729,11 @@ class _BattleScreenState extends State<BattleScreen> with TickerProviderStateMix
     }
   }
 
-  // 将掉落物品添加到背包
-  void _addItemsToInventory(List<String> itemIds, BuildContext context) {
-    try {
-      // 获取背包服务实例
-      final inventoryService = Provider.of<InventoryService>(context, listen: false);
-      
-      for (final itemId in itemIds) {
-        // 创建背包物品
-        final inventoryItem = InventoryItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + '_' + itemId,
-          itemId: itemId,
-          name: _getItemDisplayName(itemId),
-          description: _getItemDescription(itemId),
-          type: _getItemType(itemId),
-          iconPath: _getItemIconPath(itemId),
-          itemData: _getItemData(itemId),
-          quantity: 1,
-          stackable: _isStackableItem(itemId),
-          maxStack: _isStackableItem(itemId) ? 99 : 1,
-          obtainedAt: DateTime.now(),
-          source: '战斗掉落',
-        );
-        
-        // 添加到背包
-        final success = inventoryService.inventory.addItem(inventoryItem);
-        if (success) {
-          debugPrint('🎒 战斗掉落物品已添加到背包: ${inventoryItem.name}');
-        } else {
-          debugPrint('🎒 背包空间不足，无法添加物品: ${inventoryItem.name}');
-        }
-      }
-      
-      // 背包服务会自动通知更新，无需手动调用
-    } catch (e) {
-      debugPrint('🎒 添加战斗掉落物品到背包失败: $e');
-    }
-  }
 
-  // 获取物品类型
-  InventoryItemType _getItemType(String itemId) {
-    const itemTypes = {
-      // 纯材料类（不可直接使用）
-      'wolf_fang': InventoryItemType.material,
-      'wolf_pelt': InventoryItemType.material,
-      
-      // 装备类
-      'goblin_dagger': InventoryItemType.equipment,
-      'cursed_blade': InventoryItemType.equipment,
-      'dragon_scale': InventoryItemType.equipment,
-      
-      // 可消耗使用的物品
-      'poison_sac': InventoryItemType.consumable,
-      'stone_core': InventoryItemType.consumable,
-      'earth_crystal': InventoryItemType.consumable,
-      'shadow_essence': InventoryItemType.consumable,
-      'fire_crystal': InventoryItemType.consumable,
-      'dragon_heart': InventoryItemType.consumable,
-    };
-    
-    return itemTypes[itemId] ?? InventoryItemType.material;
-  }
 
-  // 判断物品是否可堆叠
-  bool _isStackableItem(String itemId) {
-    const stackableItems = {
-      'wolf_fang', 'wolf_pelt', 'poison_sac', 'stone_core', 
-      'earth_crystal', 'shadow_essence', 'dragon_scale', 
-      'fire_crystal', 'dragon_heart'
-    };
-    
-    return stackableItems.contains(itemId);
-  }
 
-  // 获取物品描述
-  String _getItemDescription(String itemId) {
-    const itemDescriptions = {
-      'wolf_fang': '野狼的尖锐牙齿，可用于制作武器或药剂',
-      'wolf_pelt': '野狼的毛皮，柔软且坚韧，是制作护甲的好材料',
-      'goblin_dagger': '哥布林使用的粗制匕首，虽然简陋但依然锋利',
-      'poison_sac': '含有剧毒的囊袋，可用于制作毒药或解毒剂',
-      'stone_core': '蕴含大地之力的石核，可用于炼制丹药',
-      'earth_crystal': '纯净的土系水晶，蕴含浓郁的土元素力量',
-      'shadow_essence': '暗影的精华，神秘而危险的炼金材料',
-      'cursed_blade': '被诅咒的刀刃，散发着不祥的气息',
-      'dragon_scale': '巨龙的鳞片，坚硬无比，是顶级的防具材料',
-      'fire_crystal': '火系水晶，内含炽热的火元素能量',
-      'dragon_heart': '巨龙的心脏，蕴含强大的龙族力量',
-    };
-    
-    return itemDescriptions[itemId] ?? '战斗中获得的物品';
-  }
 
-  // 获取物品数据（属性和效果）
-  Map<String, dynamic> _getItemData(String itemId) {
-    const itemDataMap = {
-      // 材料类物品 - 主要用于制作，部分可直接使用
-      'wolf_fang': {
-        'rarity': 'common',
-        'sellPrice': 10,
-      },
-      'wolf_pelt': {
-        'rarity': 'common', 
-        'sellPrice': 15,
-      },
-      'poison_sac': {
-        'rarity': 'uncommon',
-        'sellPrice': 25,
-        'heal': -20, // 毒囊使用后会减血（危险物品）
-      },
-      'stone_core': {
-        'rarity': 'uncommon',
-        'sellPrice': 30,
-        'mana': 20, // 石核可以恢复少量法力
-      },
-      'earth_crystal': {
-        'rarity': 'rare',
-        'sellPrice': 50,
-        'mana': 40,
-      },
-      'shadow_essence': {
-        'rarity': 'rare',
-        'sellPrice': 80,
-        'exp': 50, // 暗影精华可以提供经验
-      },
-      'fire_crystal': {
-        'rarity': 'rare',
-        'sellPrice': 60,
-        'heal': 30, // 火系水晶可以恢复生命
-      },
-      'dragon_heart': {
-        'rarity': 'epic',
-        'sellPrice': 500,
-        'heal': 100,
-        'mana': 100,
-        'exp': 200, // 龙心是强力的恢复物品
-      },
-      
-      // 装备类物品
-      'goblin_dagger': {
-        'rarity': 'common',
-        'attack': 15,
-        'durability': 100,
-        'sellPrice': 40,
-      },
-      'cursed_blade': {
-        'rarity': 'rare',
-        'attack': 45,
-        'durability': 150,
-        'sellPrice': 200,
-        'curse': true, // 诅咒效果
-      },
-      'dragon_scale': {
-        'rarity': 'epic',
-        'defense': 30,
-        'durability': 300,
-        'sellPrice': 300,
-      },
-    };
-    
-    return Map<String, dynamic>.from(itemDataMap[itemId] ?? {});
-  }
 
-  // 获取物品图标路径
-  String? _getItemIconPath(String itemId) {
-    // 暂时返回null，避免404错误
-    // 后续可以添加实际的图标文件
-    return null;
-  }
 
   // 获取物品显示名称
   String _getItemDisplayName(String itemId) {

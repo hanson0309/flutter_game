@@ -4,7 +4,6 @@ import '../models/shop.dart';
 import '../models/player.dart';
 import '../services/shop_service.dart';
 import '../services/audio_service.dart';
-import '../services/inventory_service.dart';
 import '../providers/game_provider.dart';
 import '../widgets/swipe_back_wrapper.dart';
 
@@ -61,8 +60,8 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      body: Consumer3<ShopService, GameProvider, InventoryService>(
-        builder: (context, shopService, gameProvider, inventoryService, child) {
+      body: Consumer2<ShopService, GameProvider>(
+        builder: (context, shopService, gameProvider, child) {
           return TabBarView(
             controller: _tabController,
             children: [
@@ -547,8 +546,7 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
   void _purchaseItem(ShopItem item, ShopService shopService, GameProvider gameProvider) {
     AudioService().playClickSound();
     
-    final inventoryService = Provider.of<InventoryService>(context, listen: false);
-    final result = shopService.purchaseItem(item.id, gameProvider.player!, inventoryService);
+    final result = shopService.purchaseItem(item.id, gameProvider.player!);
     
     if (result.success) {
       _showPurchaseSuccessDialog(item, result);

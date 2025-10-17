@@ -125,9 +125,8 @@ class AchievementService extends ChangeNotifier {
     updateAchievementProgress('technique_learner', player.learnedTechniques.isNotEmpty ? 1 : 0);
     updateAchievementProgress('technique_master', player.learnedTechniques.length);
 
-    // 装备成就
-    final equippedCount = player.equippedItems.values.where((item) => item != null).length;
-    updateAchievementProgress('first_equipment', equippedCount > 0 ? 1 : 0);
+    // 装备成就（暂时禁用）
+    updateAchievementProgress('first_equipment', 0);
 
     // 灵石成就（基于总获得的灵石，这里用当前灵石作为简化）
     updateAchievementProgress('spirit_collector', player.spiritStones);

@@ -26,15 +26,6 @@ Player _$PlayerFromJson(Map<String, dynamic> json) => Player(
   learnedTechniques: (json['learnedTechniques'] as List<dynamic>?)
       ?.map((e) => LearnedTechnique.fromJson(e as Map<String, dynamic>))
       .toList(),
-  equippedItems: (json['equippedItems'] as Map<String, dynamic>?)?.map(
-    (k, e) => MapEntry(
-      k,
-      e == null ? null : EquippedItem.fromJson(e as Map<String, dynamic>),
-    ),
-  ),
-  inventory: (json['inventory'] as List<dynamic>?)
-      ?.map((e) => EquippedItem.fromJson(e as Map<String, dynamic>))
-      .toList(),
 );
 
 Map<String, dynamic> _$PlayerToJson(Player instance) => <String, dynamic>{
@@ -53,6 +44,4 @@ Map<String, dynamic> _$PlayerToJson(Player instance) => <String, dynamic>{
   'spiritStones': instance.spiritStones,
   'cultivationPoints': instance.cultivationPoints,
   'learnedTechniques': instance.learnedTechniques,
-  'equippedItems': instance.equippedItems,
-  'inventory': instance.inventory,
 };

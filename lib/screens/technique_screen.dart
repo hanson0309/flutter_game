@@ -374,9 +374,6 @@ class _TechniqueScreenState extends State<TechniqueScreen>
   }
 
   void _upgradeTechnique(String techniqueId) {
-    final gameProvider = context.read<GameProvider>();
-    final player = gameProvider.player!;
-    
     // 升级功法的逻辑
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

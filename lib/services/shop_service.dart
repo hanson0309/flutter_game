@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/shop.dart';
 import '../models/player.dart';
 import 'audio_service.dart';
-import 'inventory_service.dart';
 
 class ShopService extends ChangeNotifier {
   List<Shop> _shops = [];
@@ -584,7 +583,7 @@ class ShopService extends ChangeNotifier {
   }
 
   // 购买商品
-  PurchaseResult purchaseItem(String itemId, Player player, InventoryService inventoryService, {int quantity = 1}) {
+  PurchaseResult purchaseItem(String itemId, Player player, {int quantity = 1}) {
     final item = getItem(itemId);
     if (item == null) {
       return PurchaseResult(success: false, message: '商品不存在');
@@ -624,11 +623,8 @@ class ShopService extends ChangeNotifier {
     // 记录购买
     shopData.addPurchase(itemId, quantity);
 
-    // 将物品添加到背包
-    final addSuccess = inventoryService.addItemFromShop(item, quantity, '商店购买');
-    if (!addSuccess) {
-      return PurchaseResult(success: false, message: '背包空间不足');
-    }
+    // 记录购买的物品（暂时只记录日志）
+    debugPrint('🏪 购买物品: ${item.name} x$quantity');
 
     // 保存数据
     _savePlayerShopData();

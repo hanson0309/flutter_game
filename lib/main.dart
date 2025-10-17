@@ -5,11 +5,8 @@ import 'services/achievement_service.dart';
 import 'services/audio_service.dart';
 import 'services/task_service.dart';
 import 'services/shop_service.dart';
-import 'services/inventory_service.dart';
 import 'services/battle_service.dart';
-import 'services/equipment_synthesis_service.dart';
 import 'screens/yinian_game_screen.dart';
-import 'screens/equipment_synthesis_screen.dart';
 
 void main() {
   runApp(const XiuXianApp());
@@ -26,13 +23,7 @@ class XiuXianApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AchievementService()..initializeAchievements()),
         ChangeNotifierProvider(create: (context) => TaskService()..initializeTasks()),
         ChangeNotifierProvider(create: (context) => ShopService()..initializeShops()),
-        ChangeNotifierProvider(create: (context) => InventoryService()..initializeInventory()),
         ChangeNotifierProvider(create: (context) => BattleService()..initializeBattleSystem()),
-        ChangeNotifierProxyProvider<InventoryService, EquipmentSynthesisService>(
-          create: (context) => EquipmentSynthesisService(context.read<InventoryService>()),
-          update: (context, inventoryService, synthesisService) => 
-              synthesisService ?? EquipmentSynthesisService(inventoryService),
-        ),
         ChangeNotifierProxyProvider2<AchievementService, TaskService, GameProvider>(
           create: (context) {
             final gameProvider = GameProvider();
@@ -56,9 +47,6 @@ class XiuXianApp extends StatelessWidget {
           useMaterial3: true,
         ),
         home: const YinianGameScreen(),
-        routes: {
-          '/equipment_synthesis': (context) => const EquipmentSynthesisScreen(),
-        },
         debugShowCheckedModeBanner: false,
       ),
     );
