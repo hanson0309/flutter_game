@@ -12,7 +12,37 @@ class CharacterInfoScreen extends StatefulWidget {
   State<CharacterInfoScreen> createState() => _CharacterInfoScreenState();
 }
 
-class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
+class _CharacterInfoScreenState extends State<CharacterInfoScreen> with TickerProviderStateMixin {
+  late AnimationController _floatingController;
+  late Animation<double> _floatingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化浮动动画
+    _floatingController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    
+    _floatingAnimation = Tween<double>(
+      begin: -10.0,
+      end: 10.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOut,
+    ));
+    
+    // 开始循环动画
+    _floatingController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _floatingController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SwipeBackScaffold(
@@ -23,16 +53,12 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           
           return Stack(
             children: [
-              // 背景渐变
+              // 背景图片
               Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF1a1a3a),
-                      Color(0xFF0a0a1a),
-                    ],
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/backgrounds/info_background.png'),
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
@@ -48,7 +74,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                           // 返回按钮
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                            icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 28),
                           ),
                           const Spacer(),
                           // 背包按钮
@@ -134,7 +160,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                       TabBar(
                         indicatorColor: Colors.amber,
                         labelColor: Colors.amber,
-                        unselectedLabelColor: Colors.white70,
+                        unselectedLabelColor: Colors.black54,
                         tabs: const [
                           Tab(text: '装备'),
                           Tab(text: '道具'),
@@ -255,7 +281,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                     Text(
                       item.description,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.black87,
                         fontSize: 12,
                       ),
                     ),
@@ -332,7 +358,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                 Text(
                   name,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -364,18 +390,26 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10), // 减少边距
       child: Stack(
         children: [
-          // 人物图片 - 居中显示，占据更大空间
+          // 人物图片 - 居中显示，占据更大空间，带浮动效果
           Center(
-            child: Image.asset(
-              'assets/images/characters/character_stand.png',
-              height: 500, // 设置更大的高度
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                // 如果图片加载失败，显示默认图标
-                return Icon(
-                  Icons.person,
-                  size: 400,
-                  color: Colors.cyan.withOpacity(0.8),
+            child: AnimatedBuilder(
+              animation: _floatingAnimation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, _floatingAnimation.value),
+                  child: Image.asset(
+                    'assets/images/characters/character_stand.png',
+                    height: 500, // 设置更大的高度
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // 如果图片加载失败，显示默认图标
+                      return Icon(
+                        Icons.person,
+                        size: 400,
+                        color: Colors.cyan.withOpacity(0.8),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -747,9 +781,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white70,
+                color: Colors.black87,
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const Spacer(),
@@ -809,9 +843,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.brown.shade50,
         border: Border.all(
-          color: Colors.transparent,
+          color: Colors.brown.shade200,
           width: 1,
         ),
       ),
@@ -821,7 +855,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           const Text(
             '属性',
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -840,9 +874,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.brown.shade50,
         border: Border.all(
-          color: Colors.transparent,
+          color: Colors.brown.shade200,
           width: 1,
         ),
       ),
@@ -852,7 +886,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           const Text(
             '修炼信息',
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -871,7 +905,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                 children: [
                   const Text(
                     '升级进度',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    style: TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     '${(player.levelProgress * 100).toStringAsFixed(1)}%',
@@ -911,9 +945,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.brown.shade50,
         border: Border.all(
-          color: Colors.transparent,
+          color: Colors.brown.shade200,
           width: 1,
         ),
       ),
@@ -923,7 +957,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           const Text(
             '资源',
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -945,7 +979,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           Text(
@@ -973,7 +1007,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           Column(
