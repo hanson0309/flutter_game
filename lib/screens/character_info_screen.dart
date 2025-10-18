@@ -377,37 +377,45 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   Widget _buildCharacterArea(BuildContext context, Player player) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 10), // 减少边距
+      child: Stack(
         children: [
-          // 左侧格子区域
-          _buildSideSlots(context, true),
-          // 人物区域
-          Expanded(
-            flex: 3,
-            child: Container(
-              child: Image.asset(
-                'assets/images/characters/character_stand.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  // 如果图片加载失败，显示默认图标
-                  return Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.cyan.withOpacity(0.2),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      size: 400,
-                      color: Colors.cyan.withOpacity(0.8),
-                    ),
-                  );
-                },
-              ),
+          // 人物图片 - 居中显示，占据更大空间
+          Center(
+            child: Image.asset(
+              'assets/images/characters/character_stand.png',
+              height: 500, // 设置更大的高度
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                // 如果图片加载失败，显示默认图标
+                return Icon(
+                  Icons.person,
+                  size: 400,
+                  color: Colors.cyan.withOpacity(0.8),
+                );
+              },
             ),
           ),
-          // 右侧格子区域
-          _buildSideSlots(context, false),
+          // 左侧装备槽位 - 绝对定位
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 80,
+              child: _buildSideSlots(context, true),
+            ),
+          ),
+          // 右侧装备槽位 - 绝对定位
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(
+              width: 80,
+              child: _buildSideSlots(context, false),
+            ),
+          ),
         ],
       ),
     );
@@ -415,9 +423,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 构建左右两侧的装备槽位
   Widget _buildSideSlots(BuildContext context, bool isLeft) {
-    return Container(
-      width: 80,
-      child: Column(
+    return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(4, (index) {
           final slotIndex = isLeft ? index : index + 4;
@@ -465,7 +471,6 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
             },
           );
         }),
-      ),
     );
   }
 
