@@ -147,22 +147,62 @@ class GameProvider extends ChangeNotifier {
 
   // 开始游戏主循环
   void _startGameTick() {
+    int tickCount = 0; // 添加计数器
     _gameTickTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_player != null) {
+        tickCount++;
         // 这里可以添加游戏的持续逻辑，比如：
         // - 自动恢复生命值和法力值
         // - 检查离线收益
         // - 更新游戏状态等
         
-        // 自动恢复少量生命值和法力值
-        if (_player!.currentHealth < _player!.actualMaxHealth) {
-          _player!.restoreHealth(_player!.actualMaxHealth * 0.01);
+        // 自动恢复少量生命值和法力值（包含装备加成）
+        final totalMaxHealth = _player!.actualMaxHealth + equipmentHealthBonus;
+        final totalMaxMana = _player!.actualMaxMana + equipmentManaBonus;
+        
+        // 添加安全检查，防止异常大的数值
+        final safeMaxHealth = totalMaxHealth.clamp(1, 1000000); // 限制最大生命值范围
+        final safeMaxMana = totalMaxMana.clamp(1, 1000000); // 限制最大法力值范围
+        
+        bool needsUpdate = false;
+        
+        if (_player!.currentHealth < safeMaxHealth) {
+          final healthRestore = safeMaxHealth * 0.005; // 每秒恢复0.5%最大生命值
+          final oldHealth = _player!.currentHealth;
+          _player!.currentHealth = (_player!.currentHealth + healthRestore).clamp(0.0, safeMaxHealth).toDouble();
+          needsUpdate = true;
+          // 只在生命值显著变化时输出调试信息（每100点输出一次）
+          if ((_player!.currentHealth - oldHealth) > 0 && (_player!.currentHealth.toInt() % 100 == 0 || _player!.currentHealth >= safeMaxHealth)) {
+            debugPrint('🩸 自动回复生命值: ${_player!.currentHealth.toStringAsFixed(1)}/${safeMaxHealth.toStringAsFixed(1)}');
+          }
         }
-        if (_player!.currentMana < _player!.actualMaxMana) {
-          _player!.restoreMana(_player!.actualMaxMana * 0.02);
+        if (_player!.currentMana < safeMaxMana) {
+          final manaRestore = safeMaxMana * 0.01; // 每秒恢复1%最大法力值
+          final oldMana = _player!.currentMana;
+          _player!.currentMana = (_player!.currentMana + manaRestore).clamp(0.0, safeMaxMana).toDouble();
+          needsUpdate = true;
+          // 只在法力值显著变化时输出调试信息（每50点输出一次）
+          if ((_player!.currentMana - oldMana) > 0 && (_player!.currentMana.toInt() % 50 == 0 || _player!.currentMana >= safeMaxMana)) {
+            debugPrint('💙 自动回复法力值: ${_player!.currentMana.toStringAsFixed(1)}/${safeMaxMana.toStringAsFixed(1)}');
+          }
         }
         
-        notifyListeners();
+        // 只在有变化时才通知监听者
+        if (needsUpdate) {
+          notifyListeners();
+          
+          // 每2秒保存一次数据，确保生命值和法力值的变化被持久化
+          if (tickCount % 2 == 0) {
+            // 异步保存，避免阻塞UI
+            _saveGameData().catchError((error) {
+              debugPrint('💾 保存数据失败: $error');
+            });
+            // 减少日志输出频率，每10秒输出一次
+            if (tickCount % 30 == 0) {
+              debugPrint('💾 自动保存游戏数据 (生命值: ${_player!.currentHealth.toStringAsFixed(1)}, 法力值: ${_player!.currentMana.toStringAsFixed(1)})');
+            }
+          }
+        }
       }
     });
   }
@@ -328,9 +368,32 @@ class GameProvider extends ChangeNotifier {
       _equippedItems[slotIndex] = null;
       addEquipmentToInventory(unequippedItem);
       
+      // 卸载装备后，调整当前生命值和法力值，确保不超过新的最大值
+      _adjustHealthAndManaAfterUnequip();
+      
       debugPrint('🎒 卸载装备: ${unequippedItem.name}');
       _saveGameData();
       notifyListeners();
+    }
+  }
+  
+  // 卸载装备后调整生命值和法力值
+  void _adjustHealthAndManaAfterUnequip() {
+    if (_player == null) return;
+    
+    final newMaxHealth = _player!.actualMaxHealth + equipmentHealthBonus;
+    final newMaxMana = _player!.actualMaxMana + equipmentManaBonus;
+    
+    // 如果当前生命值超过新的最大值，调整为新的最大值
+    if (_player!.currentHealth > newMaxHealth) {
+      _player!.currentHealth = newMaxHealth;
+      debugPrint('🩸 调整生命值: ${_player!.currentHealth}/${newMaxHealth}');
+    }
+    
+    // 如果当前法力值超过新的最大值，调整为新的最大值
+    if (_player!.currentMana > newMaxMana) {
+      _player!.currentMana = newMaxMana;
+      debugPrint('💙 调整法力值: ${_player!.currentMana}/${newMaxMana}');
     }
   }
 
@@ -350,20 +413,26 @@ class GameProvider extends ChangeNotifier {
 
   // 计算装备生命加成
   double get equipmentHealthBonus {
-    return _equippedItems
+    final bonus = _equippedItems
         .where((item) => item != null)
         .fold(0.0, (sum, item) => sum + item!.healthBonus);
+    // 限制装备加成范围，防止异常值
+    return bonus.clamp(0, 100000);
   }
 
   // 计算装备法力加成
   double get equipmentManaBonus {
-    return _equippedItems
+    final bonus = _equippedItems
         .where((item) => item != null)
         .fold(0.0, (sum, item) => sum + item!.manaBonus);
+    // 限制装备加成范围，防止异常值
+    return bonus.clamp(0, 50000);
   }
 
   @override
   void dispose() {
+    // 在销毁前保存最新的游戏数据
+    _saveGameData();
     _autoTrainingTimer?.cancel();
     _gameTickTimer?.cancel();
     super.dispose();

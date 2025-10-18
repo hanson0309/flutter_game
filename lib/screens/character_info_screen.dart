@@ -73,44 +73,28 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                           ),
                           const SizedBox(width: 8),
                           // 等级信息
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.cyan.withOpacity(0.2),
-                                  Colors.blue.withOpacity(0.2),
-                                ],
-                              ),
-                              border: Border.all(
-                                color: Colors.cyan.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              player.currentRealm.name,
-                              style: const TextStyle(
-                                color: Colors.cyan,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          Text(
+                            '${player.currentRealm.name} ${((player.currentExp / player.currentRealm.maxExp) * 100).toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              color: Colors.cyan,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  // 人物区域 - 占据大部分页面
+                  // 人物区域 - 减少空间
                   Expanded(
-                    flex: 10,
+                    flex: 8,
                     child: _buildCharacterArea(context, player),
                   ),
                   // 血条和蓝条
                   _buildHealthManaBar(context, player, gameProvider),
-                  // 属性信息区域
+                  // 属性信息区域 - 增加空间
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: _buildAttributesArea(context, player, gameProvider),
                   ),
                 ],
@@ -416,6 +400,38 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
               child: _buildSideSlots(context, false),
             ),
           ),
+          // 右侧一键装备按钮 - 独立定位
+          Positioned(
+            right: 7,
+            bottom: 20,
+            child: Container(
+              width: 65,
+              height: 30,
+              child: Consumer<GameProvider>(
+                builder: (context, gameProvider, child) {
+                  return ElevatedButton(
+                    onPressed: () => _autoEquipAll(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.withOpacity(0.8),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    child: const Text(
+                      '一键装备',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -423,54 +439,57 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 构建左右两侧的装备槽位
   Widget _buildSideSlots(BuildContext context, bool isLeft) {
-    return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(4, (index) {
-          final slotIndex = isLeft ? index : index + 4;
-          return Consumer<GameProvider>(
-            builder: (context, gameProvider, child) {
-              final equippedItem = gameProvider.equippedItems[slotIndex];
-              
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 20),
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: equippedItem != null 
-                        ? equippedItem.color.withOpacity(0.6)
-                        : Colors.white.withOpacity(0.3),
-                    width: 2,
-                  ),
-                  color: equippedItem != null 
-                      ? equippedItem.color.withOpacity(0.1)
-                      : Colors.black.withOpacity(0.2),
+    List<Widget> children = List.generate(4, (index) {
+      final slotIndex = isLeft ? index : index + 4;
+      return Consumer<GameProvider>(
+        builder: (context, gameProvider, child) {
+          final equippedItem = gameProvider.equippedItems[slotIndex];
+          
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 20),
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: equippedItem != null 
+                    ? equippedItem.color.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.3),
+                width: 2,
+              ),
+              color: equippedItem != null 
+                  ? equippedItem.color.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.2),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _handleSlotTap(context, slotIndex),
+                child: Center(
+                  child: equippedItem != null
+                      ? Icon(
+                          equippedItem.icon,
+                          color: equippedItem.color,
+                          size: 24,
+                        )
+                      : Icon(
+                          Icons.add,
+                          color: Colors.white.withOpacity(0.5),
+                          size: 20,
+                        ),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => _handleSlotTap(context, slotIndex),
-                    child: Center(
-                      child: equippedItem != null
-                          ? Icon(
-                              equippedItem.icon,
-                              color: equippedItem.color,
-                              size: 24,
-                            )
-                          : Icon(
-                              Icons.add,
-                              color: Colors.white.withOpacity(0.5),
-                              size: 20,
-                            ),
-                    ),
-                  ),
-                ),
-              );
-            },
+              ),
+            ),
           );
-        }),
+        },
+      );
+    });
+
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: children,
     );
   }
 
@@ -688,7 +707,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     final totalMaxMana = player.actualMaxMana + gameProvider.equipmentManaBonus;
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Column(
         children: [
           // 血条
@@ -770,7 +789,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   Widget _buildAttributesArea(BuildContext context, Player player, GameProvider gameProvider) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       child: SingleChildScrollView(
         child: Column(
           children: [
@@ -981,5 +1000,98 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
         ],
       ),
     );
+  }
+
+  // 一键装备所有可装备的装备
+  void _autoEquipAll(BuildContext context) {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    final player = gameProvider.player;
+    
+    if (player == null) return;
+    
+    int equippedCount = 0;
+    List<String> equippedItems = [];
+    
+    // 遍历背包中的所有装备
+    for (final item in List.from(gameProvider.globalInventory)) {
+      // 检查是否已经装备了这个物品
+      bool alreadyEquipped = gameProvider.equippedItems.any((equipped) => 
+        equipped != null && equipped.id == item.id && equipped.name == item.name);
+      
+      if (alreadyEquipped) continue;
+      
+      // 根据装备类型找到合适的槽位
+      int? targetSlot = _findBestSlotForItem(item, gameProvider);
+      
+      if (targetSlot != null) {
+        // 装备物品
+        gameProvider.equipItem(item, targetSlot);
+        equippedCount++;
+        equippedItems.add(item.name);
+        
+        // 限制一次最多装备8件（避免过多操作）
+        if (equippedCount >= 8) break;
+      }
+    }
+    
+    // 显示装备结果
+    if (equippedCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✨ 一键装备完成！装备了 $equippedCount 件装备'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('💡 没有找到可装备的装备'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+  
+  // 为装备找到最佳槽位
+  int? _findBestSlotForItem(EquipmentItem item, GameProvider gameProvider) {
+    // 根据装备名称和属性判断装备类型，然后分配到合适的槽位
+    // 槽位分配：0-3左侧，4-7右侧
+    
+    // 武器类装备 - 优先右上角槽位
+    if (item.name.contains('剑') || item.name.contains('刀') || item.name.contains('枪') || item.attackBonus > 0) {
+      for (int slot in [4, 5, 6, 7]) {
+        if (gameProvider.equippedItems[slot] == null) return slot;
+      }
+    }
+    
+    // 防具类装备 - 优先左侧槽位
+    if (item.name.contains('甲') || item.name.contains('盾') || item.name.contains('护') || item.defenseBonus > 0) {
+      for (int slot in [0, 1, 2, 3]) {
+        if (gameProvider.equippedItems[slot] == null) return slot;
+      }
+    }
+    
+    // 法术类装备 - 优先右侧槽位
+    if (item.name.contains('法') || item.name.contains('帽') || item.name.contains('冠') || item.manaBonus > 0) {
+      for (int slot in [4, 5, 6, 7]) {
+        if (gameProvider.equippedItems[slot] == null) return slot;
+      }
+    }
+    
+    // 饰品类装备 - 优先左侧槽位
+    if (item.name.contains('项链') || item.name.contains('戒指') || item.name.contains('护符') || item.healthBonus > 0) {
+      for (int slot in [0, 1, 2, 3]) {
+        if (gameProvider.equippedItems[slot] == null) return slot;
+      }
+    }
+    
+    // 如果没有找到特定类型的槽位，找任意空槽位
+    for (int slot = 0; slot < 8; slot++) {
+      if (gameProvider.equippedItems[slot] == null) return slot;
+    }
+    
+    return null; // 没有空槽位
   }
 }
