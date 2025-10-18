@@ -19,9 +19,13 @@ class GameProvider extends ChangeNotifier {
   // 全局装备背包
   List<EquipmentItem> _globalInventory = [];
   
+  // 装备栏数据 - 8个槽位
+  List<EquipmentItem?> _equippedItems = List.filled(8, null);
+  
   Player? get player => _player;
   bool get isGameStarted => _player != null;
   List<EquipmentItem> get globalInventory => _globalInventory;
+  List<EquipmentItem?> get equippedItems => _equippedItems;
   
   // 设置成就服务
   void setAchievementService(AchievementService achievementService) {
@@ -204,6 +208,10 @@ class GameProvider extends ChangeNotifier {
     // 保存装备数据
     final equipmentJson = jsonEncode(_globalInventory.map((e) => e.toJson()).toList());
     await prefs.setString('equipment_data', equipmentJson);
+    
+    // 保存装备栏数据
+    final equippedJson = jsonEncode(_equippedItems.map((e) => e?.toJson()).toList());
+    await prefs.setString('equipped_data', equippedJson);
   }
 
   // 加载游戏数据
@@ -223,6 +231,15 @@ class GameProvider extends ChangeNotifier {
           _globalInventory = equipmentList.map((e) => EquipmentItem.fromJson(e)).toList();
         } else {
           _globalInventory = [];
+        }
+        
+        // 加载装备栏数据
+        final equippedJson = prefs.getString('equipped_data');
+        if (equippedJson != null) {
+          final equippedList = jsonDecode(equippedJson) as List;
+          _equippedItems = equippedList.map((e) => e != null ? EquipmentItem.fromJson(e) : null).toList();
+        } else {
+          _equippedItems = List.filled(8, null);
         }
         
         _calculateOfflineRewards();
@@ -251,6 +268,11 @@ class GameProvider extends ChangeNotifier {
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('player_data');
+    await prefs.remove('equipment_data');
+    await prefs.remove('equipped_data');
+    
+    _globalInventory.clear();
+    _equippedItems = List.filled(8, null);
     
     notifyListeners();
   }
@@ -276,6 +298,68 @@ class GameProvider extends ChangeNotifier {
     addEquipmentToInventory(equipment);
     debugPrint('🎒 装备已添加到背包: ${equipment.name}, 攻击+${equipment.attackBonus}, 防御+${equipment.defenseBonus}');
     debugPrint('🎒 当前背包装备数量: ${_globalInventory.length}');
+  }
+
+  // 装备物品到指定槽位
+  void equipItem(EquipmentItem item, int slotIndex) {
+    if (slotIndex < 0 || slotIndex >= 8) return;
+    
+    // 如果槽位已有装备，先卸载到背包
+    if (_equippedItems[slotIndex] != null) {
+      final oldItem = _equippedItems[slotIndex]!;
+      addEquipmentToInventory(oldItem);
+    }
+    
+    // 装备新物品
+    _equippedItems[slotIndex] = item;
+    removeEquipmentFromInventory(item);
+    
+    debugPrint('⚔️ 装备成功: ${item.name} -> 槽位 ${slotIndex + 1}');
+    _saveGameData();
+    notifyListeners();
+  }
+
+  // 卸载指定槽位的装备
+  void unequipItem(int slotIndex) {
+    if (slotIndex < 0 || slotIndex >= 8) return;
+    
+    final unequippedItem = _equippedItems[slotIndex];
+    if (unequippedItem != null) {
+      _equippedItems[slotIndex] = null;
+      addEquipmentToInventory(unequippedItem);
+      
+      debugPrint('🎒 卸载装备: ${unequippedItem.name}');
+      _saveGameData();
+      notifyListeners();
+    }
+  }
+
+  // 计算装备攻击加成
+  double get equipmentAttackBonus {
+    return _equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.attackBonus);
+  }
+
+  // 计算装备防御加成
+  double get equipmentDefenseBonus {
+    return _equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.defenseBonus);
+  }
+
+  // 计算装备生命加成
+  double get equipmentHealthBonus {
+    return _equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.healthBonus);
+  }
+
+  // 计算装备法力加成
+  double get equipmentManaBonus {
+    return _equippedItems
+        .where((item) => item != null)
+        .fold(0.0, (sum, item) => sum + item!.manaBonus);
   }
 
   @override

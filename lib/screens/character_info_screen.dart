@@ -13,35 +13,6 @@ class CharacterInfoScreen extends StatefulWidget {
 }
 
 class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
-  // 装备栏数据 - 8个槽位（左4个，右4个）
-  List<EquipmentItem?> equippedItems = List.filled(8, null);
-  
-
-  // 计算装备加成
-  double get equipmentAttackBonus {
-    return equippedItems
-        .where((item) => item != null)
-        .fold(0.0, (sum, item) => sum + item!.attackBonus);
-  }
-
-  double get equipmentDefenseBonus {
-    return equippedItems
-        .where((item) => item != null)
-        .fold(0.0, (sum, item) => sum + item!.defenseBonus);
-  }
-
-  double get equipmentHealthBonus {
-    return equippedItems
-        .where((item) => item != null)
-        .fold(0.0, (sum, item) => sum + item!.healthBonus);
-  }
-
-  double get equipmentManaBonus {
-    return equippedItems
-        .where((item) => item != null)
-        .fold(0.0, (sum, item) => sum + item!.manaBonus);
-  }
-
   @override
   Widget build(BuildContext context) {
     return SwipeBackScaffold(
@@ -102,34 +73,29 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                           ),
                           const SizedBox(width: 8),
                           // 等级信息
-                          Consumer<GameProvider>(
-                            builder: (context, gameProvider, child) {
-                              final player = gameProvider.player!;
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.cyan.withOpacity(0.2),
-                                      Colors.blue.withOpacity(0.2),
-                                    ],
-                                  ),
-                                  border: Border.all(
-                                    color: Colors.cyan.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  player.currentRealm.name,
-                                  style: const TextStyle(
-                                    color: Colors.cyan,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              );
-                            },
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.cyan.withOpacity(0.2),
+                                  Colors.blue.withOpacity(0.2),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: Colors.cyan.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              player.currentRealm.name,
+                              style: const TextStyle(
+                                color: Colors.cyan,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -141,11 +107,11 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                     child: _buildCharacterArea(context, player),
                   ),
                   // 血条和蓝条
-                  _buildHealthManaBar(player),
+                  _buildHealthManaBar(context, player, gameProvider),
                   // 属性信息区域
                   Expanded(
                     flex: 2,
-                    child: _buildAttributesArea(player),
+                    child: _buildAttributesArea(context, player, gameProvider),
                   ),
                 ],
               ),
@@ -156,231 +122,6 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     );
   }
 
-  // 人物区域 - 占据大部分页面
-  Widget _buildCharacterArea(BuildContext context, Player player) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          // 左侧格子区域
-          _buildSideSlots(context, true),
-          // 人物区域
-          Expanded(
-            flex: 3,
-            child: Container(
-              child: Image.asset(
-                'assets/images/characters/character_stand.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  // 如果图片加载失败，显示默认图标
-                  return Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.cyan.withOpacity(0.2),
-                    ),
-                    child: Icon(
-                      Icons.person,
-                      size: 400,
-                      color: Colors.cyan.withOpacity(0.8),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // 右侧格子区域
-          _buildSideSlots(context, false),
-        ],
-      ),
-    );
-  }
-
-  // 构建左右两侧的格子
-  Widget _buildSideSlots(BuildContext context, bool isLeft) {
-    return Container(
-      width: 80,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(4, (index) {
-          final slotIndex = isLeft ? index : index + 4;
-          final equippedItem = equippedItems[slotIndex];
-          
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 20),
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: equippedItem != null 
-                    ? equippedItem.color.withOpacity(0.6)
-                    : Colors.white.withOpacity(0.3),
-                width: 2,
-              ),
-              color: equippedItem != null 
-                  ? equippedItem.color.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.2),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () => _handleSlotTap(context, slotIndex),
-                child: Center(
-                  child: equippedItem != null
-                      ? Icon(
-                          equippedItem.icon,
-                          color: equippedItem.color,
-                          size: 24,
-                        )
-                      : Icon(
-                          Icons.add,
-                          color: Colors.white.withOpacity(0.5),
-                          size: 20,
-                        ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  // 处理装备槽位点击
-  void _handleSlotTap(BuildContext context, int slotIndex) {
-    final equippedItem = equippedItems[slotIndex];
-    
-    if (equippedItem != null) {
-      // 如果已有装备，显示装备详情和卸载选项
-      _showEquippedItemDialog(context, slotIndex, equippedItem);
-    } else {
-      // 如果没有装备，显示装备选择界面
-      _showEquipmentSelection(context, slotIndex);
-    }
-  }
-
-  // 显示已装备物品的详情对话框
-  void _showEquippedItemDialog(BuildContext context, int slotIndex, EquipmentItem item) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1a1a2e),
-          title: Text(
-            item.name,
-            style: TextStyle(
-              color: item.color,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.icon,
-                color: item.color,
-                size: 48,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                item.description,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _unequipItem(slotIndex);
-              },
-              child: const Text(
-                '卸载',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                '取消',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // 显示装备选择对话框
-  void _showEquipmentSelection(BuildContext context, int slotIndex) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Consumer<GameProvider>(
-          builder: (context, gameProvider, child) {
-            final player = gameProvider.player!;
-            
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1a1a2e),
-              title: Text(
-                '选择装备',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Container(
-                width: double.maxFinite,
-                height: 300,
-                child: Column(
-                  children: [
-                    Text(
-                      '选择要装备的物品 - 槽位 ${slotIndex + 1}',
-                      style: const TextStyle(
-                        color: Colors.cyan,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: Consumer<GameProvider>(
-                        builder: (context, gameProvider, child) {
-                          return ListView(
-                            children: gameProvider.globalInventory
-                                .where((item) => !equippedItems.contains(item))
-                                .map((item) => _buildSelectableEquipmentItem(context, item, slotIndex))
-                                .toList(),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    '取消',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   // 显示背包界面
   void _showInventory(BuildContext context) {
     showDialog(
@@ -388,8 +129,6 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
       builder: (BuildContext context) {
         return Consumer<GameProvider>(
           builder: (context, gameProvider, child) {
-            final player = gameProvider.player!;
-            
             return AlertDialog(
               backgroundColor: const Color(0xFF1a1a2e),
               title: const Text(
@@ -464,95 +203,99 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
 
   // 构建背包中的装备项
   Widget _buildInventoryEquipmentItem(BuildContext context, EquipmentItem item) {
-    final isEquipped = equippedItems.contains(item);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(
-          color: isEquipped ? Colors.green.withOpacity(0.5) : Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              color: item.color.withOpacity(0.2),
-            ),
-            child: Icon(
-              item.icon,
-              color: item.color,
-              size: 20,
+    return Consumer<GameProvider>(
+      builder: (context, gameProvider, child) {
+        final isEquipped = gameProvider.equippedItems.contains(item);
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white.withOpacity(0.05),
+            border: Border.all(
+              color: isEquipped ? Colors.green.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+              width: 1,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  color: item.color.withOpacity(0.2),
+                ),
+                child: Icon(
+                  item.icon,
+                  color: item.color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.name,
-                      style: TextStyle(
-                        color: item.color,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (isEquipped) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: Colors.green.withOpacity(0.2),
-                        ),
-                        child: const Text(
-                          '已装备',
+                    Row(
+                      children: [
+                        Text(
+                          item.name,
                           style: TextStyle(
-                            color: Colors.green,
-                            fontSize: 10,
+                            color: item.color,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (isEquipped) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: Colors.green.withOpacity(0.2),
+                            ),
+                            child: const Text(
+                              '已装备',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      item.description,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
                       ),
-                    ],
+                    ),
                   ],
                 ),
-                Text(
-                  item.description,
-                  style: const TextStyle(
+              ),
+              if (isEquipped)
+                const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 20,
+                )
+              else
+                const Text(
+                  'x1',
+                  style: TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-          if (isEquipped)
-            const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 20,
-            )
-          else
-            const Text(
-              'x1',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -632,8 +375,238 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     );
   }
 
-  // 构建装备项
-  Widget _buildEquipmentItem(BuildContext context, String name, String description) {
+  Widget _buildCharacterArea(BuildContext context, Player player) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          // 左侧格子区域
+          _buildSideSlots(context, true),
+          // 人物区域
+          Expanded(
+            flex: 3,
+            child: Container(
+              child: Image.asset(
+                'assets/images/characters/character_stand.png',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  // 如果图片加载失败，显示默认图标
+                  return Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.cyan.withOpacity(0.2),
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      size: 400,
+                      color: Colors.cyan.withOpacity(0.8),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // 右侧格子区域
+          _buildSideSlots(context, false),
+        ],
+      ),
+    );
+  }
+
+  // 构建左右两侧的装备槽位
+  Widget _buildSideSlots(BuildContext context, bool isLeft) {
+    return Container(
+      width: 80,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(4, (index) {
+          final slotIndex = isLeft ? index : index + 4;
+          return Consumer<GameProvider>(
+            builder: (context, gameProvider, child) {
+              final equippedItem = gameProvider.equippedItems[slotIndex];
+              
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 20),
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: equippedItem != null 
+                        ? equippedItem.color.withOpacity(0.6)
+                        : Colors.white.withOpacity(0.3),
+                    width: 2,
+                  ),
+                  color: equippedItem != null 
+                      ? equippedItem.color.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.2),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _handleSlotTap(context, slotIndex),
+                    child: Center(
+                      child: equippedItem != null
+                          ? Icon(
+                              equippedItem.icon,
+                              color: equippedItem.color,
+                              size: 24,
+                            )
+                          : Icon(
+                              Icons.add,
+                              color: Colors.white.withOpacity(0.5),
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        }),
+      ),
+    );
+  }
+
+  // 处理装备槽位点击
+  void _handleSlotTap(BuildContext context, int slotIndex) {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    final equippedItem = gameProvider.equippedItems[slotIndex];
+    
+    if (equippedItem != null) {
+      // 如果已有装备，显示装备详情和卸载选项
+      _showEquippedItemDialog(context, slotIndex, equippedItem);
+    } else {
+      // 如果没有装备，显示装备选择界面
+      _showEquipmentSelection(context, slotIndex);
+    }
+  }
+
+  // 显示已装备物品的详情对话框
+  void _showEquippedItemDialog(BuildContext context, int slotIndex, EquipmentItem item) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1a1a2e),
+          title: Text(
+            item.name,
+            style: TextStyle(
+              color: item.color,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                item.icon,
+                color: item.color,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                item.description,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                final gameProvider = Provider.of<GameProvider>(context, listen: false);
+                gameProvider.unequipItem(slotIndex);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('装备已卸载'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              },
+              child: const Text(
+                '卸载',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                '取消',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 显示装备选择对话框
+  void _showEquipmentSelection(BuildContext context, int slotIndex) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Consumer<GameProvider>(
+          builder: (context, gameProvider, child) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1a1a2e),
+              title: const Text(
+                '选择装备',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Container(
+                width: double.maxFinite,
+                height: 300,
+                child: Column(
+                  children: [
+                    Text(
+                      '选择要装备的物品 - 槽位 ${slotIndex + 1}',
+                      style: const TextStyle(
+                        color: Colors.cyan,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: ListView(
+                        children: gameProvider.globalInventory
+                            .where((item) => !gameProvider.equippedItems.contains(item))
+                            .map((item) => _buildSelectableEquipmentItem(context, item, slotIndex))
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    '取消',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // 构建可选择的装备项
+  Widget _buildSelectableEquipmentItem(BuildContext context, EquipmentItem item, int slotIndex) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -641,7 +614,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
         borderRadius: BorderRadius.circular(8),
         color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: item.color.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -652,11 +625,11 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
             height: 40,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
-              color: Colors.amber.withOpacity(0.2),
+              color: item.color.withOpacity(0.2),
             ),
-            child: const Icon(
-              Icons.shield,
-              color: Colors.amber,
+            child: Icon(
+              item.icon,
+              color: item.color,
               size: 20,
             ),
           ),
@@ -666,15 +639,15 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  item.name,
+                  style: TextStyle(
+                    color: item.color,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  description,
+                  item.description,
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -685,12 +658,13 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
           ),
           IconButton(
             onPressed: () {
-              // 这里处理装备选择逻辑
               Navigator.of(context).pop();
+              final gameProvider = Provider.of<GameProvider>(context, listen: false);
+              gameProvider.equipItem(item, slotIndex);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('已装备: $name'),
-                  backgroundColor: Colors.green.withOpacity(0.8),
+                  content: Text('已装备: ${item.name}'),
+                  backgroundColor: Colors.green,
                 ),
               );
             },
@@ -704,10 +678,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     );
   }
 
-  // 血条和蓝条
-  Widget _buildHealthManaBar(Player player) {
-    final totalMaxHealth = player.actualMaxHealth + equipmentHealthBonus;
-    final totalMaxMana = player.actualMaxMana + equipmentManaBonus;
+  Widget _buildHealthManaBar(BuildContext context, Player player, GameProvider gameProvider) {
+    final totalMaxHealth = player.actualMaxHealth + gameProvider.equipmentHealthBonus;
+    final totalMaxMana = player.actualMaxMana + gameProvider.equipmentManaBonus;
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -790,14 +763,13 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     );
   }
 
-  // 属性信息区域
-  Widget _buildAttributesArea(Player player) {
+  Widget _buildAttributesArea(BuildContext context, Player player, GameProvider gameProvider) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
         child: Column(
           children: [
-            _buildAttributesSection(player),
+            _buildAttributesSection(player, gameProvider),
             const SizedBox(height: 16),
             _buildCultivationSection(player),
             const SizedBox(height: 16),
@@ -808,7 +780,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
     );
   }
 
-  Widget _buildAttributesSection(Player player) {
+  Widget _buildAttributesSection(Player player, GameProvider gameProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -831,9 +803,9 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildAttributeRow('总战力', (player.totalPower + equipmentAttackBonus + equipmentDefenseBonus).toStringAsFixed(0), Colors.amber, Icons.star),
-          _buildEnhancedAttributeRow('攻击力', player.actualAttack, equipmentAttackBonus, Colors.red, Icons.flash_on),
-          _buildEnhancedAttributeRow('防御力', player.actualDefense, equipmentDefenseBonus, Colors.blue, Icons.security),
+          _buildAttributeRow('总战力', (player.totalPower + gameProvider.equipmentAttackBonus + gameProvider.equipmentDefenseBonus).toStringAsFixed(0), Colors.amber, Icons.star),
+          _buildEnhancedAttributeRow('攻击力', player.actualAttack, gameProvider.equipmentAttackBonus, Colors.red, Icons.flash_on),
+          _buildEnhancedAttributeRow('防御力', player.actualDefense, gameProvider.equipmentDefenseBonus, Colors.blue, Icons.security),
         ],
       ),
     );
@@ -1000,115 +972,6 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
                   ),
                 ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 卸载装备
-  void _unequipItem(int slotIndex) {
-    final gameProvider = Provider.of<GameProvider>(context, listen: false);
-    setState(() {
-      final unequippedItem = equippedItems[slotIndex];
-      if (unequippedItem != null) {
-        equippedItems[slotIndex] = null;
-        // 将装备放回全局背包
-        gameProvider.addEquipmentToInventory(unequippedItem);
-      }
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('装备已卸载'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  // 装备物品
-  void _equipItem(EquipmentItem item, int slotIndex) {
-    final gameProvider = Provider.of<GameProvider>(context, listen: false);
-    setState(() {
-      // 如果槽位已有装备，先卸载
-      if (equippedItems[slotIndex] != null) {
-        final oldItem = equippedItems[slotIndex]!;
-        gameProvider.addEquipmentToInventory(oldItem);
-      }
-      
-      // 装备新物品
-      equippedItems[slotIndex] = item;
-      gameProvider.removeEquipmentFromInventory(item);
-    });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('已装备: ${item.name}'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  // 构建可选择的装备项
-  Widget _buildSelectableEquipmentItem(BuildContext context, EquipmentItem item, int slotIndex) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(
-          color: item.color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              color: item.color.withOpacity(0.2),
-            ),
-            child: Icon(
-              item.icon,
-              color: item.color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: TextStyle(
-                    color: item.color,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  item.description,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _equipItem(item, slotIndex);
-            },
-            icon: const Icon(
-              Icons.add_circle,
-              color: Colors.green,
-            ),
           ),
         ],
       ),
