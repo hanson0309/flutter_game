@@ -248,6 +248,12 @@ class GameProvider extends ChangeNotifier {
     }
     
     _autoTrainingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // 检查Provider是否还有监听器，避免在Widget销毁后调用notifyListeners
+      if (!hasListeners) {
+        timer.cancel();
+        return;
+      }
+      
       if (_player != null) {
         final oldLevel = _player!.level;
         final expGained = _player!.trainOnce();
@@ -270,7 +276,8 @@ class GameProvider extends ChangeNotifier {
           _taskService?.addTaskProgress('cultivation_count', 10);
         }
         
-        notifyListeners();
+        // 安全地调用notifyListeners
+        _safeNotifyListeners();
         debugPrint('自动修炼获得 $expGained 经验值');
       } else {
         timer.cancel();
@@ -288,6 +295,12 @@ class GameProvider extends ChangeNotifier {
   void _startGameTick() {
     int tickCount = 0; // 添加计数器
     _gameTickTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      // 检查Provider是否还有监听器，避免在Widget销毁后调用notifyListeners
+      if (!hasListeners) {
+        timer.cancel();
+        return;
+      }
+      
       if (_player != null) {
         tickCount++;
         // 这里可以添加游戏的持续逻辑，比如：
@@ -338,7 +351,7 @@ class GameProvider extends ChangeNotifier {
         
         // 只在有变化时才通知监听者
         if (needsUpdate) {
-          notifyListeners();
+          _safeNotifyListeners();
           
           // 每2秒保存一次数据，确保生命值和法力值的变化被持久化
           if (tickCount % 2 == 0) {
@@ -590,6 +603,17 @@ class GameProvider extends ChangeNotifier {
         .fold(0.0, (sum, item) => sum + item!.manaBonus);
     // 限制装备加成范围，防止异常值
     return bonus.clamp(0, 50000);
+  }
+
+  // 安全的notifyListeners包装方法
+  void _safeNotifyListeners() {
+    if (hasListeners) {
+      try {
+        notifyListeners();
+      } catch (e) {
+        debugPrint('⚠️ notifyListeners错误: $e');
+      }
+    }
   }
 
   @override

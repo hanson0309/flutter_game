@@ -6,6 +6,7 @@ import 'services/audio_service.dart';
 import 'services/task_service.dart';
 import 'services/shop_service.dart';
 import 'services/battle_service.dart';
+import 'services/map_service.dart';
 import 'screens/yinian_game_screen.dart';
 
 void main() {
@@ -24,13 +25,17 @@ class XiuXianApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => TaskService()..initializeTasks()),
         ChangeNotifierProvider(create: (context) => ShopService()..initializeShops()),
         ChangeNotifierProvider(create: (context) => BattleService()..initializeBattleSystem()),
-        ChangeNotifierProxyProvider3<AchievementService, TaskService, BattleService, GameProvider>(
+        ChangeNotifierProxyProvider<BattleService, MapService>(
+          create: (context) => MapService(context.read<BattleService>()),
+          update: (context, battleService, mapService) => MapService(battleService),
+        ),
+        ChangeNotifierProxyProvider4<AchievementService, TaskService, BattleService, MapService, GameProvider>(
           create: (context) {
             final gameProvider = GameProvider();
             gameProvider.initializeGame();
             return gameProvider;
           },
-          update: (context, achievementService, taskService, battleService, gameProvider) {
+          update: (context, achievementService, taskService, battleService, mapService, gameProvider) {
             gameProvider?.setAchievementService(achievementService);
             gameProvider?.setTaskService(taskService);
             gameProvider?.setBattleService(battleService);

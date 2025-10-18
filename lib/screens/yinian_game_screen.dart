@@ -7,9 +7,9 @@ import '../screens/technique_screen.dart';
 import '../screens/task_screen.dart';
 import '../screens/achievement_screen.dart';
 import 'shop_screen.dart';
-import 'exploration_screen.dart';
 import 'settings_screen.dart';
 import 'character_info_screen.dart';
+import 'map_screen.dart';
 import '../services/audio_service.dart';
 
 class YinianGameScreen extends StatefulWidget {
@@ -577,7 +577,7 @@ class _YinianGameScreenState extends State<YinianGameScreen>
         children: [
           _buildNavItem(Icons.task_alt, '任务', () => _navigateToScreen(const TaskScreen())),
           _buildNavItem(Icons.book, '功法', () => _navigateToScreen(const TechniqueScreen())),
-          _buildNavItem(Icons.sports_martial_arts, '战斗', () => _navigateToScreen(const ExplorationScreen())),
+          _buildNavItem(Icons.sports_martial_arts, '战斗', () => _navigateToScreen(const MapScreen())),
           _buildNavItem(Icons.emoji_events, '成就', () => _navigateToScreen(const AchievementScreen())),
           _buildNavItem(Icons.store, '商店', () => _navigateToScreen(const ShopScreen())),
         ],
@@ -614,6 +614,7 @@ class _YinianGameScreenState extends State<YinianGameScreen>
       ),
     );
   }
+
 
   void _navigateToScreen(Widget screen) {
     Navigator.of(context).push(
