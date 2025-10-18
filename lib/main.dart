@@ -24,15 +24,16 @@ class XiuXianApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => TaskService()..initializeTasks()),
         ChangeNotifierProvider(create: (context) => ShopService()..initializeShops()),
         ChangeNotifierProvider(create: (context) => BattleService()..initializeBattleSystem()),
-        ChangeNotifierProxyProvider2<AchievementService, TaskService, GameProvider>(
+        ChangeNotifierProxyProvider3<AchievementService, TaskService, BattleService, GameProvider>(
           create: (context) {
             final gameProvider = GameProvider();
             gameProvider.initializeGame();
             return gameProvider;
           },
-          update: (context, achievementService, taskService, gameProvider) {
+          update: (context, achievementService, taskService, battleService, gameProvider) {
             gameProvider?.setAchievementService(achievementService);
             gameProvider?.setTaskService(taskService);
+            gameProvider?.setBattleService(battleService);
             return gameProvider!;
           },
         ),

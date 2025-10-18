@@ -8,6 +8,7 @@ import '../models/equipment_item.dart';
 import '../services/achievement_service.dart';
 import '../services/audio_service.dart';
 import '../services/task_service.dart';
+import '../services/battle_service.dart';
 
 class GameProvider extends ChangeNotifier {
   Player? _player;
@@ -15,6 +16,8 @@ class GameProvider extends ChangeNotifier {
   Timer? _gameTickTimer;
   AchievementService? _achievementService;
   TaskService? _taskService;
+  BattleService? _battleService;
+  int _cultivationCount = 0; // 修炼次数计数器
   
   // 全局装备背包
   List<EquipmentItem> _globalInventory = [];
@@ -35,6 +38,46 @@ class GameProvider extends ChangeNotifier {
   // 设置任务服务
   void setTaskService(TaskService taskService) {
     _taskService = taskService;
+  }
+
+  // 设置战斗服务
+  void setBattleService(BattleService battleService) {
+    _battleService = battleService;
+    // 设置战斗胜利回调
+    _battleService!.onBattleWon = _onBattleWon;
+  }
+
+  // 战斗胜利回调
+  void _onBattleWon() {
+    if (_player == null) return;
+    
+    debugPrint('🏆 战斗胜利！更新成就和任务进度');
+    
+    // 更新成就进度
+    _achievementService?.onBattleWon();
+    _achievementService?.checkAndUpdateAchievements(_player!);
+    
+    // 更新任务进度
+    _taskService?.addTaskProgress('battle_count', 1);
+  }
+
+  // 学习功法
+  bool learnTechnique(String techniqueId) {
+    if (_player == null) return false;
+    
+    final success = _player!.learnTechnique(techniqueId);
+    if (success) {
+      debugPrint('📚 学习功法成功: $techniqueId');
+      
+      // 更新成就和任务进度
+      _achievementService?.checkAndUpdateAchievements(_player!);
+      _taskService?.updateTaskProgress('technique_count', _player!.learnedTechniques.length);
+      
+      _saveGameData();
+      notifyListeners();
+    }
+    
+    return success;
   }
 
   // 初始化游戏
@@ -130,7 +173,27 @@ class GameProvider extends ChangeNotifier {
     
     _autoTrainingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_player != null) {
+        final oldLevel = _player!.level;
         final expGained = _player!.trainOnce();
+        
+        // 检查是否升级了
+        if (_player!.level > oldLevel) {
+          // 播放升级音效
+          AudioService().playLevelUpSound();
+          debugPrint('🎉 自动修炼境界突破！当前境界: ${_player!.currentRealm.name}');
+          
+          // 更新成就和任务进度（升级时）
+          _achievementService?.checkAndUpdateAchievements(_player!);
+          _taskService?.updateTaskProgress('level_reach', _player!.level);
+        }
+        
+        // 定期更新修炼次数相关的成就和任务（每10次修炼更新一次，避免过于频繁）
+        _cultivationCount++;
+        if (_cultivationCount % 10 == 0) {
+          _achievementService?.checkAndUpdateAchievements(_player!);
+          _taskService?.addTaskProgress('cultivation_count', 10);
+        }
+        
         notifyListeners();
         debugPrint('自动修炼获得 $expGained 经验值');
       } else {
@@ -338,6 +401,13 @@ class GameProvider extends ChangeNotifier {
     addEquipmentToInventory(equipment);
     debugPrint('🎒 装备已添加到背包: ${equipment.name}, 攻击+${equipment.attackBonus}, 防御+${equipment.defenseBonus}');
     debugPrint('🎒 当前背包装备数量: ${_globalInventory.length}');
+    
+    // 更新成就和任务进度
+    if (_player != null) {
+      _achievementService?.checkAndUpdateAchievements(_player!);
+      // 可以添加购买装备相关的任务进度更新
+      // _taskService?.addTaskProgress('equipment_purchase', 1);
+    }
   }
 
   // 装备物品到指定槽位
@@ -355,6 +425,13 @@ class GameProvider extends ChangeNotifier {
     removeEquipmentFromInventory(item);
     
     debugPrint('⚔️ 装备成功: ${item.name} -> 槽位 ${slotIndex + 1}');
+    
+    // 更新成就和任务进度
+    if (_player != null) {
+      _achievementService?.checkAndUpdateAchievements(_player!);
+      _taskService?.updateTaskProgress('weapon_equipped', _equippedItems.where((item) => item != null).length);
+    }
+    
     _saveGameData();
     notifyListeners();
   }

@@ -811,7 +811,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
         borderRadius: BorderRadius.circular(12),
         color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.transparent,
           width: 1,
         ),
       ),
@@ -842,7 +842,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
         borderRadius: BorderRadius.circular(12),
         color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.transparent,
           width: 1,
         ),
       ),
@@ -913,7 +913,7 @@ class _CharacterInfoScreenState extends State<CharacterInfoScreen> {
         borderRadius: BorderRadius.circular(12),
         color: Colors.white.withOpacity(0.05),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.transparent,
           width: 1,
         ),
       ),

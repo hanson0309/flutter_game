@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/shop.dart';
 import '../models/player.dart';
+import '../models/cultivation_realm.dart';
 import '../services/shop_service.dart';
 import '../services/audio_service.dart';
 import '../providers/game_provider.dart';
@@ -523,14 +524,8 @@ class _ShopScreenState extends State<ShopScreen> with TickerProviderStateMixin {
   }
 
   String _getLevelName(int level) {
-    // 这里应该从CultivationRealm获取，简化处理
-    const levelNames = [
-      '凡人', '练气期', '筑基期', '金丹期', '元婴期', '化神期'
-    ];
-    if (level < levelNames.length) {
-      return levelNames[level];
-    }
-    return '第${level}境界';
+    final realm = CultivationRealm.getRealmByLevel(level);
+    return realm.name;
   }
 
   bool _canPlayerAfford(Player player, ItemPrice price) {

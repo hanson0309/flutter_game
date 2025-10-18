@@ -14,6 +14,9 @@ class BattleService extends ChangeNotifier {
   
   // 玩家动作回调
   Function(BattleAction)? onPlayerAction;
+  
+  // 战斗胜利回调
+  Function()? onBattleWon;
 
   BattleData? get currentBattle => _currentBattle;
   List<BattleSkill> get playerSkills => _playerSkills;
@@ -574,6 +577,9 @@ class BattleService extends ChangeNotifier {
   void _endBattle() {
     if (_currentBattle?.state == BattleState.victory) {
       AudioService().playVictorySound();
+      // 调用战斗胜利回调
+      onBattleWon?.call();
+      debugPrint('🏆 战斗胜利，触发成就和任务更新');
     } else if (_currentBattle?.state == BattleState.defeat) {
       AudioService().playDefeatSound();
     }
