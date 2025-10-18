@@ -474,7 +474,7 @@ class _YinianGameScreenState extends State<YinianGameScreen>
                     const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      '${player.totalPower.toInt()}',
+                      '${(player.totalPower + gameProvider.equipmentAttackBonus + gameProvider.equipmentDefenseBonus).toInt()}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -495,25 +495,25 @@ class _YinianGameScreenState extends State<YinianGameScreen>
                       Icons.flash_on,
                       '攻击力',
                       'Lv.${player.level}',
-                      '${player.actualAttack.toInt()}',
+                      '${(player.actualAttack + gameProvider.equipmentAttackBonus).toInt()}',
                     ),
                     _buildAttributeRow(
                       Icons.favorite,
                       '气血',
                       'Lv.${player.level}',
-                      '${player.currentHealth.toInt()}/${player.actualMaxHealth.toInt()}',
+                      '${player.currentHealth.toInt()}/${(player.actualMaxHealth + gameProvider.equipmentHealthBonus).toInt()}',
                     ),
                     _buildAttributeRow(
                       Icons.shield,
                       '防御力',
                       'Lv.${player.level}',
-                      '${player.actualDefense.toInt()}',
+                      '${(player.actualDefense + gameProvider.equipmentDefenseBonus).toInt()}',
                     ),
                     _buildAttributeRow(
                       Icons.auto_fix_high,
                       '法力值',
                       'Lv.${player.level}',
-                      '${player.currentMana.toInt()}/${player.actualMaxMana.toInt()}',
+                      '${player.currentMana.toInt()}/${(player.actualMaxMana + gameProvider.equipmentManaBonus).toInt()}',
                     ),
                   ],
                 ),
