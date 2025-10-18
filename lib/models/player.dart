@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'cultivation_realm.dart';
 import 'technique.dart';
@@ -119,9 +120,9 @@ class Player {
     currentExp -= currentRealm.maxExp;
     level++;
     
-    // 升级后恢复满血满蓝
-    currentHealth = actualMaxHealth;
-    currentMana = actualMaxMana;
+    // 升级后不再自动恢复满血满蓝，让玩家自己决定何时恢复
+    // 这样可以保持战斗后的真实状态
+    debugPrint('🎉 境界突破！等级提升至 $level');
     
     return true;
   }

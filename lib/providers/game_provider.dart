@@ -9,6 +9,7 @@ import '../services/achievement_service.dart';
 import '../services/audio_service.dart';
 import '../services/task_service.dart';
 import '../services/battle_service.dart';
+import '../models/battle.dart';
 
 class GameProvider extends ChangeNotifier {
   Player? _player;
@@ -45,6 +46,8 @@ class GameProvider extends ChangeNotifier {
     _battleService = battleService;
     // 设置战斗胜利回调
     _battleService!.onBattleWon = _onBattleWon;
+    // 设置战斗结束回调
+    _battleService!.onBattleEnd = _onBattleEnd;
   }
 
   // 战斗胜利回调
@@ -59,6 +62,67 @@ class GameProvider extends ChangeNotifier {
     
     // 更新任务进度
     _taskService?.addTaskProgress('battle_count', 1);
+  }
+
+  // 战斗结束回调
+  void _onBattleEnd(BattleData battleData) {
+    if (_player == null) return;
+    
+    debugPrint('⚔️ 战斗结束，同步战斗数据');
+    debugPrint('🩸 战斗后生命值: ${_player!.currentHealth}/${_player!.actualMaxHealth}');
+    debugPrint('🩸 战斗数据中的生命值: ${battleData.player.currentHealth}/${battleData.player.actualMaxHealth}');
+    
+    // 强制同步战斗数据，确保生命值正确
+    if (battleData.player.currentHealth != _player!.currentHealth) {
+      debugPrint('🔄 检测到生命值不同步，强制同步');
+      _player!.currentHealth = battleData.player.currentHealth;
+    }
+    
+    // 由于战斗中使用的是同一个Player对象，生命值等已经是最新的
+    // 这里主要处理掉落物品和保存数据
+    
+    // 如果战斗胜利，处理掉落物品
+    if (battleData.state == BattleState.victory && battleData.result != null) {
+      final result = battleData.result!;
+      
+      // 添加掉落物品到背包
+      for (final itemName in result.itemsDropped) {
+        // 创建装备物品并添加到背包
+        final equipment = _createEquipmentFromDrop(itemName);
+        if (equipment != null) {
+          addEquipmentToInventory(equipment);
+          debugPrint('🎒 战斗掉落装备已添加: ${equipment.name}');
+        }
+      }
+      
+      debugPrint('💰 战斗奖励: 经验+${result.expGained}, 灵石+${result.spiritStonesGained}');
+      if (result.itemsDropped.isNotEmpty) {
+        debugPrint('🎁 掉落物品: ${result.itemsDropped.join(', ')}');
+      }
+    }
+    
+    _saveGameData();
+    notifyListeners();
+  }
+
+  // 从掉落物品名称创建装备
+  EquipmentItem? _createEquipmentFromDrop(String itemName) {
+    // 根据物品名称创建对应的装备
+    switch (itemName) {
+      case '铁剑':
+        return EquipmentItem('铁剑', '攻击力 +15', Icons.flash_on, Colors.grey, 1, attackBonus: 15);
+      case '钢剑':
+        return EquipmentItem('钢剑', '攻击力 +25', Icons.flash_on, Colors.blue, 2, attackBonus: 25);
+      case '皮甲':
+        return EquipmentItem('皮甲', '防御力 +12', Icons.shield, Colors.brown, 2, defenseBonus: 12);
+      case '铁甲':
+        return EquipmentItem('铁甲', '防御力 +20', Icons.shield, Colors.grey, 3, defenseBonus: 20);
+      case '法师袍':
+        return EquipmentItem('法师袍', '法力值 +30', Icons.auto_awesome, Colors.purple, 3, manaBonus: 30);
+      default:
+        // 默认创建一个通用装备
+        return EquipmentItem(itemName, '神秘装备', Icons.help, Colors.orange, 1, attackBonus: 5);
+    }
   }
 
   // 学习功法
@@ -78,6 +142,18 @@ class GameProvider extends ChangeNotifier {
     }
     
     return success;
+  }
+
+  // 测试方法：手动减少生命值（用于调试）
+  void testReduceHealth(double amount) {
+    if (_player == null) return;
+    
+    final oldHealth = _player!.currentHealth;
+    _player!.currentHealth = (_player!.currentHealth - amount).clamp(0, _player!.actualMaxHealth);
+    
+    debugPrint('🧪 测试减少生命值: $oldHealth -> ${_player!.currentHealth}');
+    _saveGameData();
+    notifyListeners();
   }
 
   // 初始化游戏
@@ -219,34 +295,44 @@ class GameProvider extends ChangeNotifier {
         // - 检查离线收益
         // - 更新游戏状态等
         
-        // 自动恢复少量生命值和法力值（包含装备加成）
-        final totalMaxHealth = _player!.actualMaxHealth + equipmentHealthBonus;
-        final totalMaxMana = _player!.actualMaxMana + equipmentManaBonus;
-        
-        // 添加安全检查，防止异常大的数值
-        final safeMaxHealth = totalMaxHealth.clamp(1, 1000000); // 限制最大生命值范围
-        final safeMaxMana = totalMaxMana.clamp(1, 1000000); // 限制最大法力值范围
-        
+        // 检查是否在战斗中，如果在战斗中则暂停自动回复
+        final isInBattle = _battleService?.isInBattle ?? false;
         bool needsUpdate = false;
         
-        if (_player!.currentHealth < safeMaxHealth) {
-          final healthRestore = safeMaxHealth * 0.005; // 每秒恢复0.5%最大生命值
-          final oldHealth = _player!.currentHealth;
-          _player!.currentHealth = (_player!.currentHealth + healthRestore).clamp(0.0, safeMaxHealth).toDouble();
-          needsUpdate = true;
-          // 只在生命值显著变化时输出调试信息（每100点输出一次）
-          if ((_player!.currentHealth - oldHealth) > 0 && (_player!.currentHealth.toInt() % 100 == 0 || _player!.currentHealth >= safeMaxHealth)) {
-            debugPrint('🩸 自动回复生命值: ${_player!.currentHealth.toStringAsFixed(1)}/${safeMaxHealth.toStringAsFixed(1)}');
+        if (!isInBattle) {
+          // 只在非战斗状态下自动恢复少量生命值和法力值（包含装备加成）
+          final totalMaxHealth = _player!.actualMaxHealth + equipmentHealthBonus;
+          final totalMaxMana = _player!.actualMaxMana + equipmentManaBonus;
+          
+          // 添加安全检查，防止异常大的数值
+          final safeMaxHealth = totalMaxHealth.clamp(1, 1000000); // 限制最大生命值范围
+          final safeMaxMana = totalMaxMana.clamp(1, 1000000); // 限制最大法力值范围
+          
+          if (_player!.currentHealth < safeMaxHealth) {
+            final healthRestore = safeMaxHealth * 0.005; // 每秒恢复0.5%最大生命值
+            final oldHealth = _player!.currentHealth;
+            _player!.currentHealth = (_player!.currentHealth + healthRestore).clamp(0.0, safeMaxHealth).toDouble();
+            needsUpdate = true;
+            // 只在生命值显著变化时输出调试信息（每100点输出一次）
+            if ((_player!.currentHealth - oldHealth) > 0 && (_player!.currentHealth.toInt() % 100 == 0 || _player!.currentHealth >= safeMaxHealth)) {
+              debugPrint('🩸 自动回复生命值: ${_player!.currentHealth.toStringAsFixed(1)}/${safeMaxHealth.toStringAsFixed(1)}');
+            }
           }
-        }
-        if (_player!.currentMana < safeMaxMana) {
-          final manaRestore = safeMaxMana * 0.01; // 每秒恢复1%最大法力值
-          final oldMana = _player!.currentMana;
-          _player!.currentMana = (_player!.currentMana + manaRestore).clamp(0.0, safeMaxMana).toDouble();
+          if (_player!.currentMana < safeMaxMana) {
+            final manaRestore = safeMaxMana * 0.01; // 每秒恢复1%最大法力值
+            final oldMana = _player!.currentMana;
+            _player!.currentMana = (_player!.currentMana + manaRestore).clamp(0.0, safeMaxMana).toDouble();
+            needsUpdate = true;
+            // 只在法力值显著变化时输出调试信息（每50点输出一次）
+            if ((_player!.currentMana - oldMana) > 0 && (_player!.currentMana.toInt() % 50 == 0 || _player!.currentMana >= safeMaxMana)) {
+              debugPrint('💙 自动回复法力值: ${_player!.currentMana.toStringAsFixed(1)}/${safeMaxMana.toStringAsFixed(1)}');
+            }
+          }
+        } else {
+          // 战斗中暂停自动回复，但仍然通知UI更新以显示战斗中的生命值变化
           needsUpdate = true;
-          // 只在法力值显著变化时输出调试信息（每50点输出一次）
-          if ((_player!.currentMana - oldMana) > 0 && (_player!.currentMana.toInt() % 50 == 0 || _player!.currentMana >= safeMaxMana)) {
-            debugPrint('💙 自动回复法力值: ${_player!.currentMana.toStringAsFixed(1)}/${safeMaxMana.toStringAsFixed(1)}');
+          if (tickCount % 5 == 0) { // 每5秒输出一次，避免日志过多
+            debugPrint('⚔️ 战斗中，暂停自动回复 - 当前生命值: ${_player!.currentHealth}/${_player!.actualMaxHealth}');
           }
         }
         
